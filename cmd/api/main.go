@@ -85,6 +85,12 @@ func main() {
 		logger.Error("Failed to connect to database", "err", err)
 		os.Exit(1)
 	}
+	// Explicitly ping the database to verify connection
+	if err := pool.Ping(ctx); err != nil {
+		logger.Error("Database is unreachable", "err", err)
+		os.Exit(1)
+	}
+
 	defer pool.Close()
 	logger.Info("Successfully connected to database")
 
@@ -94,6 +100,14 @@ func main() {
 		Password: cfg.Redis.Password,
 		DB:       cfg.Redis.DB,
 	})
+
+	// Explicitly ping Redis to verify connection
+	if err := redisClient.Ping(ctx).Err(); err != nil {
+		logger.Error("Redis is unreachable", "err", err)
+		os.Exit(1)
+	}
+
+	logger.Info("Successfully connected to Redis")
 
 	// Rate limiter
 	limiter := ratelimit.New(redisClient)
