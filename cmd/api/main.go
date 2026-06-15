@@ -64,7 +64,10 @@ func main() {
 	defer stop()
 
 	// Default logger with tint
-	handler := tint.NewHandler(os.Stdout, &tint.Options{TimeFormat: time.TimeOnly})
+	handler := tint.NewHandler(os.Stdout, &tint.Options{
+		TimeFormat: time.TimeOnly,
+		Level:      slog.LevelDebug,
+	})
 	logger := slog.New(handler)
 
 	// Env config loader
@@ -205,12 +208,17 @@ func (app *app) mount() http.Handler {
 	// Base middlewares
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
-	r.Use(httplog.RequestLogger(app.logger, &httplog.Options{
-		Schema: httplog.SchemaECS.Concise(true),
-	}))
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(5 * time.Second))
 	r.Use(middleware.RequestSize(1 << 20))
+	// Logger middleware
+	loggerOptions := &httplog.Options{}
+	loggerOptions.Schema = httplog.SchemaECS.Concise(true)
+	if app.cfg.Env == "dev" {
+		loggerOptions.LogRequestHeaders = []string{"Cookie"}
+		loggerOptions.Level = slog.LevelDebug
+	}
+	r.Use(httplog.RequestLogger(app.logger, loggerOptions))
 	// Security middlewares
 	crs := cors.New(cors.Options{
 		AllowedOrigins:   app.allowedOrigins,
@@ -281,6 +289,10 @@ func (app *app) run(ctx context.Context, h http.Handler) error {
 			app.logger.Error("Shutdown error", "err", err)
 			return err
 		}
+
+		// Close database and redis connections
+		app.pool.Close()
+		app.redis.Close()
 
 		app.logger.Info("Server stopped gracefully")
 	}

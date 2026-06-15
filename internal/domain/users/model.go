@@ -13,6 +13,7 @@ type User struct {
 	ID       uuid.UUID  `json:"id"`
 	Email    string     `json:"email"`
 	Username string     `json:"username"`
+	Avatar   string     `json:"avatar"`
 	Slug     string     `json:"slug"`
 	Role     types.Role `json:"role"`
 }
@@ -22,6 +23,7 @@ func FromDB(u db.User) User {
 		ID:       u.ID,
 		Email:    u.Email,
 		Username: u.Username,
+		Avatar:   u.Avatar,
 		Slug:     u.Slug,
 		Role:     u.Role,
 	}
@@ -31,12 +33,14 @@ func FromDB(u db.User) User {
 
 type PublicUser struct {
 	Username string `json:"username"`
+	Avatar   string `json:"avatar"`
 	Slug     string `json:"slug"`
 }
 
 func ToPublic(u User) PublicUser {
 	return PublicUser{
 		Username: u.Username,
+		Avatar:   u.Avatar,
 		Slug:     u.Slug,
 	}
 }

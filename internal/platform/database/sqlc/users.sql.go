@@ -15,7 +15,7 @@ import (
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (email, username, role, slug)
 VALUES ($1, $2, $3, $4)
-RETURNING id, username, email, role, slug, created_at, updated_at, deleted_at
+RETURNING id, username, email, role, avatar, slug, created_at, updated_at, deleted_at
 `
 
 type CreateUserParams struct {
@@ -38,6 +38,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Username,
 		&i.Email,
 		&i.Role,
+		&i.Avatar,
 		&i.Slug,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -47,7 +48,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 }
 
 const getAvailableUser = `-- name: GetAvailableUser :one
-SELECT id, username, email, role, slug, created_at, updated_at, deleted_at FROM users WHERE id = $1 AND deleted_at IS NULL
+SELECT id, username, email, role, avatar, slug, created_at, updated_at, deleted_at FROM users WHERE id = $1 AND deleted_at IS NULL
 `
 
 func (q *Queries) GetAvailableUser(ctx context.Context, id uuid.UUID) (User, error) {
@@ -58,6 +59,7 @@ func (q *Queries) GetAvailableUser(ctx context.Context, id uuid.UUID) (User, err
 		&i.Username,
 		&i.Email,
 		&i.Role,
+		&i.Avatar,
 		&i.Slug,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -67,7 +69,7 @@ func (q *Queries) GetAvailableUser(ctx context.Context, id uuid.UUID) (User, err
 }
 
 const getAvailableUserBySlug = `-- name: GetAvailableUserBySlug :one
-SELECT id, username, email, role, slug, created_at, updated_at, deleted_at FROM users WHERE slug = $1 AND deleted_at IS NULL
+SELECT id, username, email, role, avatar, slug, created_at, updated_at, deleted_at FROM users WHERE slug = $1 AND deleted_at IS NULL
 `
 
 func (q *Queries) GetAvailableUserBySlug(ctx context.Context, slug string) (User, error) {
@@ -78,6 +80,7 @@ func (q *Queries) GetAvailableUserBySlug(ctx context.Context, slug string) (User
 		&i.Username,
 		&i.Email,
 		&i.Role,
+		&i.Avatar,
 		&i.Slug,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -153,7 +156,7 @@ WITH old_data AS (
     updated_at = NOW()
 FROM old_data
 WHERE users.id = old_data.id
-RETURNING users.id, users.username, users.email, users.role, users.slug, users.created_at, users.updated_at, users.deleted_at, old_data.slug AS old_slug
+RETURNING users.id, users.username, users.email, users.role, users.avatar, users.slug, users.created_at, users.updated_at, users.deleted_at, old_data.slug AS old_slug
 `
 
 type UpdateUserParams struct {
@@ -175,6 +178,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateU
 		&i.User.Username,
 		&i.User.Email,
 		&i.User.Role,
+		&i.User.Avatar,
 		&i.User.Slug,
 		&i.User.CreatedAt,
 		&i.User.UpdatedAt,
@@ -185,28 +189,30 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateU
 }
 
 const upsertUser = `-- name: UpsertUser :one
-INSERT INTO users (email, username)
-VALUES ($1, $2)
+INSERT INTO users (email, username, avatar)
+VALUES ($1, $2, $3)
 ON CONFLICT (email)
 DO UPDATE SET
-    email = users.email
+    avatar = EXCLUDED.avatar
 WHERE users.deleted_at IS NULL
-RETURNING id, username, email, role, slug, created_at, updated_at, deleted_at
+RETURNING id, username, email, role, avatar, slug, created_at, updated_at, deleted_at
 `
 
 type UpsertUserParams struct {
 	Email    string `json:"email"`
 	Username string `json:"username"`
+	Avatar   string `json:"avatar"`
 }
 
 func (q *Queries) UpsertUser(ctx context.Context, arg UpsertUserParams) (User, error) {
-	row := q.db.QueryRow(ctx, upsertUser, arg.Email, arg.Username)
+	row := q.db.QueryRow(ctx, upsertUser, arg.Email, arg.Username, arg.Avatar)
 	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.Username,
 		&i.Email,
 		&i.Role,
+		&i.Avatar,
 		&i.Slug,
 		&i.CreatedAt,
 		&i.UpdatedAt,

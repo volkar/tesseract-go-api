@@ -43,8 +43,8 @@ func (s *Service) GetAvailableBySlug(ctx context.Context, slug string) (User, er
 }
 
 /* Upsert confirmed user */
-func (s *Service) Upsert(ctx context.Context, email string, username string) (User, error) {
-	return s.users.Upsert(ctx, email, username)
+func (s *Service) Upsert(ctx context.Context, email string, username string, avatar string) (User, error) {
+	return s.users.Upsert(ctx, email, username, avatar)
 }
 
 /* Create user. Use with caution! Users must be created with Upsert function via OAuth process and have validated email */

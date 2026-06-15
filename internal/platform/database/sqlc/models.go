@@ -50,6 +50,7 @@ type User struct {
 	Username  string             `json:"username"`
 	Email     string             `json:"email"`
 	Role      types.Role         `json:"role"`
+	Avatar    string             `json:"avatar"`
 	Slug      string             `json:"slug"`
 	CreatedAt time.Time          `json:"created_at"`
 	UpdatedAt time.Time          `json:"updated_at"`

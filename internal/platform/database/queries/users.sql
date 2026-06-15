@@ -5,11 +5,11 @@ SELECT * FROM users WHERE id = $1 AND deleted_at IS NULL;
 SELECT * FROM users WHERE slug = $1 AND deleted_at IS NULL;
 
 -- name: UpsertUser :one
-INSERT INTO users (email, username)
-VALUES ($1, $2)
+INSERT INTO users (email, username, avatar)
+VALUES ($1, $2, $3)
 ON CONFLICT (email)
 DO UPDATE SET
-    email = users.email
+    avatar = EXCLUDED.avatar
 WHERE users.deleted_at IS NULL
 RETURNING *;
 

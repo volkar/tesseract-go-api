@@ -34,7 +34,7 @@ func NewService(tokens *tokens.Manager, users UsersService, logger *slog.Logger,
 }
 
 type UsersService interface {
-	Upsert(ctx context.Context, email string, username string) (users.User, error)
+	Upsert(ctx context.Context, email string, username string, avatar string) (users.User, error)
 	GetAvailable(ctx context.Context, userID uuid.UUID) (users.User, error)
 }
 
@@ -48,7 +48,7 @@ func (s *Service) UpsertOAuthUser(ctx context.Context, oauthUser goth.User) (use
 	}
 	// Upsert allows register new users
 	// Can be replaced with getting user by email, to allows authentication only
-	u, err := s.users.Upsert(ctx, oauthUser.Email, oauthUser.Name)
+	u, err := s.users.Upsert(ctx, oauthUser.Email, oauthUser.Name, oauthUser.AvatarURL)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			// User deleted

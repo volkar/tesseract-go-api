@@ -109,10 +109,11 @@ func (r *Repository) GetAvailableBySlug(ctx context.Context, slug string) (User,
 }
 
 /* Upsert user by email and username, auth process */
-func (r *Repository) Upsert(ctx context.Context, email string, username string) (User, error) {
+func (r *Repository) Upsert(ctx context.Context, email string, username string, avatar string) (User, error) {
 	u, err := r.q.UpsertUser(ctx, db.UpsertUserParams{
 		Email:    email,
 		Username: username,
+		Avatar:   avatar,
 	})
 	if err != nil {
 		return User{}, err

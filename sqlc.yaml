@@ -26,3 +26,5 @@ sql:
             go_type: "api/internal/domain/shared/types.Atlas"
           - column: "users.role"
             go_type: "api/internal/domain/shared/types.Role"
+          - column: "users.avatar"
+            go_type: "string"
