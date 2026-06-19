@@ -22,6 +22,7 @@ type Repository struct {
 	q             db.Querier
 	cache         Cacher
 	cursorManager *cursor.Cursor
+	sf            singleflight.Group
 }
 
 func NewRepository(pool *pgxpool.Pool, cache Cacher, cursorManager *cursor.Cursor) *Repository {
@@ -51,8 +52,6 @@ const (
 	CachePrefixDirectTokenMapper = "c:a_dtm:"
 )
 
-var albumSlugsGroup singleflight.Group
-
 //go:embed lua/get_album_by_mapper.lua
 var getAlbumByMapperLua string
 var getAlbumByMapperScript = redis.NewScript(getAlbumByMapperLua)
@@ -69,13 +68,13 @@ func (r *Repository) GetBySlug(ctx context.Context, userID uuid.UUID, albumSlug 
 	// Not found in cache, get album from database.
 	// Use singleflight to prevent Cache Stampede
 	sfKey := "sf:album:slugs:" + userID.String() + ":" + albumSlug
-	val, err, _ := albumSlugsGroup.Do(sfKey, func() (any, error) {
+	val, err, _ := r.sf.Do(sfKey, func() (any, error) {
 		album, dbErr := r.q.GetAlbumBySlug(ctx, db.GetAlbumBySlugParams{
 			UserID:    userID,
 			AlbumSlug: albumSlug,
 		})
 		if dbErr != nil {
-			return db.Album{}, err
+			return db.Album{}, dbErr
 		}
 
 		// Async set album with mappers to cache
@@ -110,12 +109,12 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (Album, error) {
 	// Not found in cache, get album from database.
 	// Use singleflight to prevent Cache Stampede
 	sfKey := "sf:album:id:" + id.String()
-	val, err, _ := albumSlugsGroup.Do(sfKey, func() (any, error) {
+	val, err, _ := r.sf.Do(sfKey, func() (any, error) {
 		album, dbErr := r.q.GetAlbum(ctx, db.GetAlbumParams{
 			AlbumID: id,
 		})
 		if dbErr != nil {
-			return db.Album{}, err
+			return db.Album{}, dbErr
 		}
 
 		// Async set album with mappers to cache
@@ -151,10 +150,10 @@ func (r *Repository) GetByDirectToken(ctx context.Context, token uuid.UUID) (Alb
 	// Use singleflight to prevent Cache Stampede
 	sfKey := "sf:album:direct_token:" + token.String()
 	nToken := uuid.NullUUID{UUID: token, Valid: true}
-	val, err, _ := albumSlugsGroup.Do(sfKey, func() (any, error) {
+	val, err, _ := r.sf.Do(sfKey, func() (any, error) {
 		album, dbErr := r.q.GetAlbumByDirectToken(ctx, nToken)
 		if dbErr != nil {
-			return db.Album{}, err
+			return db.Album{}, dbErr
 		}
 
 		// Async set album with mappers to cache

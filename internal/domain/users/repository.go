@@ -18,6 +18,7 @@ import (
 type Repository struct {
 	q     db.Querier
 	cache Cacher
+	sf    singleflight.Group
 }
 
 func NewRepository(pool *pgxpool.Pool, cache Cacher) *Repository {
@@ -73,8 +74,6 @@ func (r *Repository) GetAvailable(ctx context.Context, id uuid.UUID) (User, erro
 	return FromDB(dbUser), nil
 }
 
-var userSlugGroup singleflight.Group
-
 /* Get non deleted user by slug with cache */
 func (r *Repository) GetAvailableBySlug(ctx context.Context, slug string) (User, error) {
 	// Try to get user from cache
@@ -86,7 +85,7 @@ func (r *Repository) GetAvailableBySlug(ctx context.Context, slug string) (User,
 	// User not found in cache, get from database
 	// Use singleflight to prevent Cache Stampede
 	sfKey := "sf:user:slug:" + slug
-	val, sfErr, _ := userSlugGroup.Do(sfKey, func() (any, error) {
+	val, sfErr, _ := r.sf.Do(sfKey, func() (any, error) {
 		dbUser, dbErr := r.q.GetAvailableUserBySlug(ctx, slug)
 		if dbErr != nil {
 			return db.User{}, dbErr
