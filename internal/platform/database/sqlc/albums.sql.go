@@ -465,6 +465,52 @@ func (q *Queries) SoftDeleteAlbum(ctx context.Context, arg SoftDeleteAlbumParams
 	return i, err
 }
 
+const toggleAlbumActive = `-- name: ToggleAlbumActive :one
+UPDATE albums a
+SET
+    is_active = $1,
+    updated_at = NOW()
+FROM users u
+WHERE a.user_id = u.id
+  AND a.id = $2
+  AND a.user_id = $3
+  AND a.deleted_at IS NULL
+  AND u.deleted_at IS NULL
+RETURNING a.id, a.title, a.cover, a.date_at, a.atlas, a.access, a.shared_emails, a.direct_token, a.slug, a.is_active, a.user_id, a.created_at, a.updated_at, a.deleted_at
+`
+
+type ToggleAlbumActiveParams struct {
+	IsActive bool      `json:"is_active"`
+	AlbumID  uuid.UUID `json:"album_id"`
+	UserID   uuid.UUID `json:"user_id"`
+}
+
+type ToggleAlbumActiveRow struct {
+	Album Album `json:"album"`
+}
+
+func (q *Queries) ToggleAlbumActive(ctx context.Context, arg ToggleAlbumActiveParams) (ToggleAlbumActiveRow, error) {
+	row := q.db.QueryRow(ctx, toggleAlbumActive, arg.IsActive, arg.AlbumID, arg.UserID)
+	var i ToggleAlbumActiveRow
+	err := row.Scan(
+		&i.Album.ID,
+		&i.Album.Title,
+		&i.Album.Cover,
+		&i.Album.DateAt,
+		&i.Album.Atlas,
+		&i.Album.Access,
+		&i.Album.SharedEmails,
+		&i.Album.DirectToken,
+		&i.Album.Slug,
+		&i.Album.IsActive,
+		&i.Album.UserID,
+		&i.Album.CreatedAt,
+		&i.Album.UpdatedAt,
+		&i.Album.DeletedAt,
+	)
+	return i, err
+}
+
 const updateAlbum = `-- name: UpdateAlbum :one
 WITH old_data AS (
   SELECT a.id, a.slug AS old_slug, u.slug AS user_slug

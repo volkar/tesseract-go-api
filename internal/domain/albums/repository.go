@@ -337,7 +337,7 @@ func (r *Repository) Update(ctx context.Context, userID uuid.UUID, albumID uuid.
 	return FromDB(a.Album), err
 }
 
-/* Update album */
+/* Update direct token */
 func (r *Repository) UpdateDirectToken(ctx context.Context, userID uuid.UUID, albumID uuid.UUID, token uuid.NullUUID) (uuid.NullUUID, error) {
 	a, err := r.q.UpdateAlbumDirectToken(ctx, db.UpdateAlbumDirectTokenParams{
 		AlbumID:     albumID,
@@ -357,6 +357,23 @@ func (r *Repository) UpdateDirectToken(ctx context.Context, userID uuid.UUID, al
 
 	// Map and return
 	return a.Album.DirectToken, err
+}
+
+/* Update album active state */
+func (r *Repository) ToggleActive(ctx context.Context, userID uuid.UUID, albumID uuid.UUID, isActive bool) (uuid.UUID, error) {
+	a, err := r.q.ToggleAlbumActive(ctx, db.ToggleAlbumActiveParams{
+		AlbumID:  albumID,
+		UserID:   userID,
+		IsActive: isActive,
+	})
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+
+	// Set new album with mapper to cache
+	r.setAlbumToCache(ctx, a.Album)
+
+	return a.Album.ID, err
 }
 
 /* Delete album */

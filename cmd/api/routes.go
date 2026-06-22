@@ -64,6 +64,7 @@ func (app *app) Routes(r *chi.Mux) {
 		r.Delete(fmt.Sprintf("/albums/{uuid:%s}", UUIDRegex), app.albumsHandler.Delete)
 		r.Post(fmt.Sprintf("/albums/{uuid:%s}/direct", UUIDRegex), app.albumsHandler.GenerateDirectToken)
 		r.Delete(fmt.Sprintf("/albums/{uuid:%s}/direct", UUIDRegex), app.albumsHandler.RevokeDirectToken)
+		r.Put(fmt.Sprintf("/albums/{uuid:%s}/active", UUIDRegex), app.albumsHandler.ToggleActive)
 		r.Post(fmt.Sprintf("/albums/{uuid:%s}/restore", UUIDRegex), app.albumsHandler.Restore)
 		r.Delete(fmt.Sprintf("/albums/{uuid:%s}/purge", UUIDRegex), app.albumsHandler.Purge)
 	})

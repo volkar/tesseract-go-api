@@ -185,6 +185,19 @@ func (s *Service) RevokeDirectToken(ctx context.Context, userID, albumID uuid.UU
 	return err
 }
 
+/* Toggle album active state */
+func (s *Service) ToggleActive(ctx context.Context, userID uuid.UUID, albumID uuid.UUID, isActive bool) (uuid.UUID, error) {
+	id, err := s.albums.ToggleActive(ctx, userID, albumID, isActive)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// Album not found or user is deleted
+			return uuid.UUID{}, response.ErrNoPermission.Wrap(err)
+		}
+		return uuid.UUID{}, err
+	}
+	return id, nil
+}
+
 /* Delete album */
 func (s *Service) Delete(ctx context.Context, userID uuid.UUID, albumID uuid.UUID) (uuid.UUID, error) {
 	a, err := s.albums.Delete(ctx, userID, albumID)

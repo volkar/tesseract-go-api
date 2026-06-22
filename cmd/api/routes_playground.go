@@ -190,7 +190,7 @@ func (app *app) PlaygroundGetUserCookies(w http.ResponseWriter, r *http.Request)
 		HttpOnly: true,
 		Secure:   app.cfg.Cookie.Secure,
 		SameSite: app.cfg.Cookie.SameSite,
-		MaxAge:   int(app.cfg.Paseto.AccessTTL.Seconds()),
+		MaxAge:   int(app.cfg.Paseto.RefreshTTL.Seconds()),
 	})
 
 	app.response.SuccessDataOnly(w, r, map[string]string{
@@ -249,7 +249,7 @@ func (app *app) PlaygroundGetAdminCookies(w http.ResponseWriter, r *http.Request
 		HttpOnly: true,
 		Secure:   app.cfg.Cookie.Secure,
 		SameSite: app.cfg.Cookie.SameSite,
-		MaxAge:   int(app.cfg.Paseto.AccessTTL.Seconds()),
+		MaxAge:   int(app.cfg.Paseto.RefreshTTL.Seconds()),
 	})
 
 	app.response.SuccessDataOnly(w, r, map[string]string{

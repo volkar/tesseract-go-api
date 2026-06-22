@@ -115,6 +115,9 @@ Create new album
 **PUT** `/albums/{album_id}`
 Update album
 
+**PUT** `/albums/{album_id}/active`
+Update album visibility (is_active flag)
+
 **POST** `/albums/{album_id}/direct`
 Generate new direct share token for album
 

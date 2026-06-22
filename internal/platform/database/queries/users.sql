@@ -21,6 +21,7 @@ WITH old_data AS (
 ) UPDATE users SET
     username = $2,
     slug = $3,
+    avatar = $4,
     updated_at = NOW()
 FROM old_data
 WHERE users.id = old_data.id

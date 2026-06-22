@@ -16,6 +16,8 @@ var reservedWords = map[string]struct{}{
 	"root":       {},
 	"owner":      {},
 	"dashboard":  {},
+	"settings":   {},
+	"albums":     {},
 }
 
 func New() *validator.Validate {

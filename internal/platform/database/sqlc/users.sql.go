@@ -155,6 +155,7 @@ WITH old_data AS (
 ) UPDATE users SET
     username = $2,
     slug = $3,
+    avatar = $4,
     updated_at = NOW()
 FROM old_data
 WHERE users.id = old_data.id
@@ -165,6 +166,7 @@ type UpdateUserParams struct {
 	ID       uuid.UUID `json:"id"`
 	Username string    `json:"username"`
 	Slug     string    `json:"slug"`
+	Avatar   string    `json:"avatar"`
 }
 
 type UpdateUserRow struct {
@@ -173,7 +175,12 @@ type UpdateUserRow struct {
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateUserRow, error) {
-	row := q.db.QueryRow(ctx, updateUser, arg.ID, arg.Username, arg.Slug)
+	row := q.db.QueryRow(ctx, updateUser,
+		arg.ID,
+		arg.Username,
+		arg.Slug,
+		arg.Avatar,
+	)
 	var i UpdateUserRow
 	err := row.Scan(
 		&i.User.ID,

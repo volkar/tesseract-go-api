@@ -338,6 +338,52 @@ func (h *Handler) RevokeDirectToken(w http.ResponseWriter, r *http.Request) {
 	h.response.Success(w, r, response.SuccessDirectTokenRevoked)
 }
 
+/* Update album */
+func (h *Handler) ToggleActive(w http.ResponseWriter, r *http.Request) {
+	// Get user claims
+	claims, ok := tokens.GetClaimsFromContext(r.Context())
+	if !ok {
+		h.response.Error(w, r, response.ErrNoClaims)
+		return
+	}
+
+	// Album id from url
+	idStr := chi.URLParam(r, "uuid")
+	albumID, err := uuid.Parse(idStr)
+	if err != nil {
+		h.response.Error(w, r, response.ErrBadUUID.Wrap(err))
+		return
+	}
+
+	// JSON decode
+	input := struct {
+		IsActive bool `json:"is_active"`
+	}{}
+	if err := request.DecodeJSONBody(w, r, &input); err != nil {
+		h.response.Error(w, r, response.ErrBadJSON.Wrap(err))
+		return
+	}
+
+	// Validate input
+	if err := h.validator.Struct(&input); err != nil {
+		h.response.ValidationError(w, r, err)
+		return
+	}
+
+	// Update album
+	album, err := h.albums.ToggleActive(r.Context(), claims.UserID, albumID, input.IsActive)
+	if err != nil {
+		h.response.Error(w, r, err)
+		return
+	}
+
+	if input.IsActive {
+		h.response.SuccessWithData(w, r, response.SuccessAlbumActive, album)
+	} else {
+		h.response.SuccessWithData(w, r, response.SuccessAlbumInactive, album)
+	}
+}
+
 /* Delete album */
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	// Parse UUID

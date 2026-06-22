@@ -5,6 +5,7 @@ import (
 	"api/internal/platform/cookies"
 	"api/internal/platform/request"
 	"api/internal/platform/response"
+	"api/internal/platform/utils"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -90,6 +91,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	input := struct {
 		Username string `json:"username" validate:"required,min=2,max=255"`
 		Slug     string `json:"slug" validate:"required,min=3,max=255,slug,notreserved"`
+		Avatar   string `json:"avatar" validate:"max=255"`
 	}{}
 	if err := request.DecodeJSONBody(w, r, &input); err != nil {
 		h.response.Error(w, r, response.ErrBadJSON.Wrap(err))
@@ -102,8 +104,19 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	avatar := input.Avatar
+	// Avatar URL check
+	if input.Avatar != "" {
+		securedAvatar, secErr := utils.ValidateAndSanitizeURL(input.Avatar)
+		if secErr != nil {
+			// Return 400 Bad Request to the user
+			h.response.Error(w, r, response.ErrInvalidImageURL.Wrap(secErr))
+		}
+		avatar = securedAvatar
+	}
+
 	// Update user
-	u, err := h.users.Update(r.Context(), updatingUserID, input.Slug, input.Username)
+	u, err := h.users.Update(r.Context(), updatingUserID, input.Slug, input.Username, avatar)
 	if err != nil {
 		h.response.Error(w, r, err)
 		return

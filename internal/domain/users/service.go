@@ -53,8 +53,8 @@ func (s *Service) Create(ctx context.Context, email string, username string, slu
 }
 
 /* Update user info */
-func (s *Service) Update(ctx context.Context, id uuid.UUID, slug string, username string) (User, error) {
-	u, err := s.users.Update(ctx, id, username, slug)
+func (s *Service) Update(ctx context.Context, id uuid.UUID, slug string, username string, avatar string) (User, error) {
+	u, err := s.users.Update(ctx, id, username, slug, avatar)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			// User not found

@@ -35,6 +35,7 @@ type Querier interface {
 	RestoreUser(ctx context.Context, userID uuid.UUID) (RestoreUserRow, error)
 	SoftDeleteAlbum(ctx context.Context, arg SoftDeleteAlbumParams) (SoftDeleteAlbumRow, error)
 	SoftDeleteUser(ctx context.Context, userID uuid.UUID) (uuid.UUID, error)
+	ToggleAlbumActive(ctx context.Context, arg ToggleAlbumActiveParams) (ToggleAlbumActiveRow, error)
 	UpdateAlbum(ctx context.Context, arg UpdateAlbumParams) (UpdateAlbumRow, error)
 	UpdateAlbumDirectToken(ctx context.Context, arg UpdateAlbumDirectTokenParams) (UpdateAlbumDirectTokenRow, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateUserRow, error)

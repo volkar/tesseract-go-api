@@ -42,6 +42,7 @@ func (e *AppError) ChangeStatus(status int) {
 
 var (
 	ErrBadJSON            = &AppError{Code: http.StatusBadRequest, Slug: "bad_json"}                     /* 400 Bad Request */
+	ErrInvalidImageURL    = &AppError{Code: http.StatusBadRequest, Slug: "invalid_image_url"}            /* 400 Bad Request */
 	ErrRequestTooLarge    = &AppError{Code: http.StatusRequestEntityTooLarge, Slug: "request_too_large"} /* 413 Request Too Large */
 	ErrBadUUID            = &AppError{Code: http.StatusBadRequest, Slug: "bad_uuid"}                     /* 400 Bad Request */
 	ErrBadProvider        = &AppError{Code: http.StatusBadRequest, Slug: "bad_provider"}                 /* 400 Bad Request */
@@ -77,6 +78,8 @@ var (
 	Success                     = &AppSuccess{Code: http.StatusOK, Slug: "success"}                /* 200 OK */
 	SuccessAlbumCreated         = &AppSuccess{Code: http.StatusCreated, Slug: "album_created"}     /* 201 Created */
 	SuccessAlbumUpdated         = &AppSuccess{Code: http.StatusOK, Slug: "album_updated"}          /* 200 OK */
+	SuccessAlbumActive          = &AppSuccess{Code: http.StatusOK, Slug: "album_active"}           /* 200 OK */
+	SuccessAlbumInactive        = &AppSuccess{Code: http.StatusOK, Slug: "album_inactive"}         /* 200 OK */
 	SuccessDirectTokenGenerated = &AppSuccess{Code: http.StatusOK, Slug: "direct_token_generated"} /* 200 OK */
 	SuccessDirectTokenRevoked   = &AppSuccess{Code: http.StatusOK, Slug: "direct_token_revoked"}   /* 200 OK */
 	SuccessAlbumDeleted         = &AppSuccess{Code: http.StatusOK, Slug: "album_deleted"}          /* 200 OK */

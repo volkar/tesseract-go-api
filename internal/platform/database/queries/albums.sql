@@ -104,6 +104,19 @@ FROM old_data
 WHERE albums.id = old_data.id
 RETURNING sqlc.embed(albums), old_data.old_direct_token;
 
+-- name: ToggleAlbumActive :one
+UPDATE albums a
+SET
+    is_active = @is_active,
+    updated_at = NOW()
+FROM users u
+WHERE a.user_id = u.id
+  AND a.id = @album_id
+  AND a.user_id = @user_id
+  AND a.deleted_at IS NULL
+  AND u.deleted_at IS NULL
+RETURNING sqlc.embed(a);
+
 -- name: SoftDeleteAlbum :one
 WITH old_data AS (
   SELECT a.id, u.slug AS user_slug
