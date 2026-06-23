@@ -40,9 +40,9 @@ func (app *app) Routes(r *chi.Mux) {
 		r.Get("/health", app.healthHandler)
 		// Me (authenticated user)
 		r.Get("/me/info", app.usersHandler.Me)
-		r.Get("/me/albums", app.albumsHandler.OwnedList)
+		r.Get("/me/albums/list", app.albumsHandler.OwnedList)
 		r.Get("/me/albums/trashed", app.albumsHandler.TrashedList)
-		r.Get(fmt.Sprintf("/me/album/{uuid:%s}", UUIDRegex), app.albumsHandler.GetOwned)
+		r.Get(fmt.Sprintf("/me/albums/{uuid:%s}", UUIDRegex), app.albumsHandler.GetOwned)
 		// Users
 		r.Get(fmt.Sprintf("/users/{slug:%s}/albums", SlugRegex), app.albumsHandler.AvailableList)
 		r.Get(fmt.Sprintf("/users/{slug:%s}/info", SlugRegex), app.usersHandler.Info)

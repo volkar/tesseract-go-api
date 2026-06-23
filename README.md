@@ -75,13 +75,13 @@ Deletes all other refresh tokens from database (logout from other devices)
 **GET** `/me/info`
 Authenticated user info
 
-**GET** `/me/albums`
+**GET** `/me/albums/list`
 Authenticated user list of all albums
 
 **GET** `/me/albums/trashed`
 Authenticated user list of trashed albums
 
-**GET** `/me/album/{album_id}`
+**GET** `/me/albums/{album_id}`
 Authenticated user any album
 
 ## Data endpoints
