@@ -56,8 +56,8 @@ func FromDB(a db.Album) Album {
 
 func FromDBList(albums []db.Album) []Album {
 	albumsResponse := make([]Album, len(albums))
-	for _, album := range albums {
-		albumsResponse = append(albumsResponse, FromDB(album))
+	for i := range albums {
+		albumsResponse[i] = FromDB(albums[i])
 	}
 	return albumsResponse
 }
