@@ -98,32 +98,35 @@ func (r *Repository) GetBySlug(ctx context.Context, userID uuid.UUID, albumSlug 
 }
 
 /* Get album by user id and album id */
-func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (Album, error) {
+func (r *Repository) GetByID(ctx context.Context, userID uuid.UUID, albumID uuid.UUID) (Album, error) {
 	// Get album from cache
-	a, err := r.getAlbumFromCache(ctx, id)
-	if err == nil {
+	a, err := r.getAlbumFromCache(ctx, albumID)
+	if err == nil && a.UserID == userID {
 		// Album found in cache, map and return
 		return FromDB(a), nil
 	}
 
 	// Not found in cache, get album from database.
 	// Use singleflight to prevent Cache Stampede
-	sfKey := "sf:album:id:" + id.String()
+	sfKey := "sf:album:id:" + albumID.String()
 	val, err, _ := r.sf.Do(sfKey, func() (any, error) {
 		album, dbErr := r.q.GetAlbum(ctx, db.GetAlbumParams{
-			AlbumID: id,
+			AlbumID: albumID,
+			UserID:  userID,
 		})
-		if dbErr != nil {
+		if dbErr != nil || album.UserID != userID {
 			return db.Album{}, dbErr
 		}
 
-		// Async set album with mappers to cache
-		bgCtx := context.WithoutCancel(ctx)
-		go func(album db.Album) {
-			timeoutCtx, cancel := context.WithTimeout(bgCtx, 100*time.Millisecond)
-			defer cancel()
-			r.setAlbumToCache(timeoutCtx, album)
-		}(album)
+		if !album.DeletedAt.Valid {
+			// Album not deleted. Async set album with mappers to cache
+			bgCtx := context.WithoutCancel(ctx)
+			go func(album db.Album) {
+				timeoutCtx, cancel := context.WithTimeout(bgCtx, 100*time.Millisecond)
+				defer cancel()
+				r.setAlbumToCache(timeoutCtx, album)
+			}(album)
+		}
 
 		// Return album
 		return album, nil

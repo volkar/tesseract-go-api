@@ -41,7 +41,7 @@ func (s *Service) GetAvailable(ctx context.Context, userID uuid.UUID, albumSlug 
 
 /* Get owned album by user id and album id */
 func (s *Service) GetOwned(ctx context.Context, userID uuid.UUID, albumID uuid.UUID) (Album, error) {
-	a, err := s.albums.GetByID(ctx, albumID)
+	a, err := s.albums.GetByID(ctx, userID, albumID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return Album{}, response.ErrAlbumNotFound.Wrap(err)

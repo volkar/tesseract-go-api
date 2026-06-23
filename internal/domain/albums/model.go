@@ -18,12 +18,24 @@ type Album struct {
 	Cover        string       `json:"cover"`
 	Atlas        types.Atlas  `json:"atlas"`
 	Access       types.Access `json:"access"`
+	DirectToken  string       `json:"direct_token"`
 	SharedEmails []string     `json:"shared_emails"`
 	DateAt       time.Time    `json:"date_at"`
 	IsActive     bool         `json:"is_active"`
+	CreatedAt    time.Time    `json:"created_at"`
+	UpdatedAt    time.Time    `json:"updated_at"`
+	DeletedAt    *time.Time   `json:"deleted_at"`
 }
 
 func FromDB(a db.Album) Album {
+	var deletedAt *time.Time
+	var directToken string
+	if a.DeletedAt.Valid {
+		deletedAt = &a.DeletedAt.Time
+	}
+	if a.DirectToken.Valid {
+		directToken = a.DirectToken.UUID.String()
+	}
 	return Album{
 		ID:           a.ID,
 		UserID:       a.UserID,
@@ -32,25 +44,20 @@ func FromDB(a db.Album) Album {
 		Cover:        a.Cover,
 		Atlas:        a.Atlas,
 		Access:       a.Access,
+		DirectToken:  directToken,
 		SharedEmails: a.SharedEmails,
 		DateAt:       a.DateAt,
 		IsActive:     a.IsActive,
+		CreatedAt:    a.CreatedAt,
+		UpdatedAt:    a.UpdatedAt,
+		DeletedAt:    deletedAt,
 	}
 }
 
 func FromDBList(albums []db.Album) []Album {
 	albumsResponse := make([]Album, len(albums))
-	for i := range albums {
-		albumsResponse[i] = Album{
-			ID:           albums[i].ID,
-			Title:        albums[i].Title,
-			Slug:         albums[i].Slug,
-			Cover:        albums[i].Cover,
-			Access:       albums[i].Access,
-			SharedEmails: albums[i].SharedEmails,
-			DateAt:       albums[i].DateAt,
-			IsActive:     albums[i].IsActive,
-		}
+	for _, album := range albums {
+		albumsResponse = append(albumsResponse, FromDB(album))
 	}
 	return albumsResponse
 }
