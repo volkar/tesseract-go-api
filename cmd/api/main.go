@@ -144,8 +144,8 @@ func main() {
 
 	// Albums package
 	albumsRepo := albums.NewRepository(pool, cache, cursorManager)
-	albumsService := albums.NewService(albumsRepo)
-	albumsHandler := albums.NewHandler(albumsService, usersService, resp, val)
+	albumsService := albums.NewService(albumsRepo, cfg.AlbumsPerPage)
+	albumsHandler := albums.NewHandler(albumsService, usersService, resp, val, cfg.AlbumsPerPage)
 
 	// Admin package
 	adminService := admin.NewService(usersService)

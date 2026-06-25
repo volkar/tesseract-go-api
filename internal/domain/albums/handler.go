@@ -17,18 +17,20 @@ import (
 )
 
 type Handler struct {
-	albums    *Service
-	users     UserGetter
-	response  *response.Response
-	validator *validator.Validate
+	albums        *Service
+	users         UserGetter
+	response      *response.Response
+	validator     *validator.Validate
+	albumsPerPage int
 }
 
-func NewHandler(service *Service, users UserGetter, response *response.Response, val *validator.Validate) *Handler {
+func NewHandler(service *Service, users UserGetter, response *response.Response, val *validator.Validate, albumsPerPage int) *Handler {
 	return &Handler{
-		albums:    service,
-		users:     users,
-		response:  response,
-		validator: val,
+		albums:        service,
+		users:         users,
+		response:      response,
+		validator:     val,
+		albumsPerPage: albumsPerPage,
 	}
 }
 
@@ -56,8 +58,14 @@ func (h *Handler) GetAvailable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Map to public album for response
-	album := ToPublic(a)
+	var album AlbumResponse
+	if a.UserID == claims.UserID {
+		// Self album, map to full data
+		album = ToMy(a)
+	} else {
+		// Public album, map to public data
+		album = ToPublic(a)
+	}
 
 	h.response.SuccessDataOnly(w, r, album)
 }
@@ -83,7 +91,10 @@ func (h *Handler) GetOwned(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.response.SuccessDataOnly(w, r, a)
+	// Map to my album
+	myAlbum := ToMy(a)
+
+	h.response.SuccessDataOnly(w, r, myAlbum)
 }
 
 func (h *Handler) GetByDirectToken(w http.ResponseWriter, r *http.Request) {
@@ -93,13 +104,16 @@ func (h *Handler) GetByDirectToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	album, err := h.albums.GetByDirectToken(r.Context(), token)
+	a, err := h.albums.GetByDirectToken(r.Context(), token)
 	if err != nil {
 		h.response.Error(w, r, err)
 		return
 	}
 
-	h.response.SuccessDataOnly(w, r, ToDirect(album))
+	// Map to direct album
+	directAlbum := ToDirect(a)
+
+	h.response.SuccessDataOnly(w, r, directAlbum)
 }
 
 /* Get album list by user slug */
@@ -116,24 +130,30 @@ func (h *Handler) AvailableList(w http.ResponseWriter, r *http.Request) {
 	// Parse pagination parameters
 	query := r.URL.Query()
 	cursor := query.Get("cursor")
-	limit := 50
+	limit := h.albumsPerPage
 	if limitParam := query.Get("limit"); limitParam != "" {
 		if parsed, err := strconv.Atoi(limitParam); err == nil {
 			limit = parsed
 		}
 	}
-	// Get album list
-	a, nextCursor, err := h.albums.ListAvailable(r.Context(), user.ID, claims.Email, cursor, limit)
+
+	var a []AlbumResponse
+	var nextCursor string
+	if claims.UserID == uuid.Nil || claims.UserID != user.ID {
+		// Get public album list
+		a, nextCursor, err = h.albums.ListAvailable(r.Context(), user.ID, claims.Email, cursor, limit)
+	} else {
+		// Get owned album list
+		a, nextCursor, err = h.albums.ListOwned(r.Context(), claims.UserID, cursor, limit)
+	}
+
 	if err != nil {
 		h.response.Error(w, r, err)
 		return
 	}
 
-	// Map to public
-	albums := ToPublicAlbumList(a)
-
 	// Return albums
-	h.response.Paginated(w, r, albums, nextCursor)
+	h.response.Paginated(w, r, a, nextCursor)
 }
 
 /* Get authenticated user's album list */
@@ -148,7 +168,7 @@ func (h *Handler) OwnedList(w http.ResponseWriter, r *http.Request) {
 	// Parse pagination parameters
 	query := r.URL.Query()
 	cursor := query.Get("cursor")
-	limit := 50
+	limit := h.albumsPerPage
 	if limitParam := query.Get("limit"); limitParam != "" {
 		if parsed, err := strconv.Atoi(limitParam); err == nil {
 			limit = parsed
@@ -176,7 +196,7 @@ func (h *Handler) TrashedList(w http.ResponseWriter, r *http.Request) {
 	// Parse pagination parameters
 	query := r.URL.Query()
 	cursor := query.Get("cursor")
-	limit := 50
+	limit := h.albumsPerPage
 	if limitParam := query.Get("limit"); limitParam != "" {
 		if parsed, err := strconv.Atoi(limitParam); err == nil {
 			limit = parsed

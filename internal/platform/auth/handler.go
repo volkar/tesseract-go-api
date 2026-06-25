@@ -6,6 +6,7 @@ import (
 	"api/internal/platform/request"
 	"api/internal/platform/response"
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"slices"
@@ -151,6 +152,12 @@ func (h *Handler) RefreshSession(w http.ResponseWriter, r *http.Request) {
 	// Exchange old refresh token
 	newAccess, newRefresh, err := h.auth.RotateRefreshToken(r.Context(), oldRefreshToken, meta)
 	if err != nil {
+		if errors.Is(err, response.ErrTokenGracePeriod) {
+			// Refresh attempt in grace period, cookies was set in prev request
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
 		// Delete all cookies
 		h.cookies.UnsetAccessCookie(w)
 		h.cookies.UnsetRefreshCookie(w)

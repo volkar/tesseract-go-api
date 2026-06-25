@@ -40,40 +40,34 @@ func FromDB(u db.User) User {
 	}
 }
 
-// Me User
+// User response
 
-type MeUser struct {
-	ID        uuid.UUID  `json:"id"`
-	Email     string     `json:"email"`
-	Username  string     `json:"username"`
-	Avatar    string     `json:"avatar"`
-	Slug      string     `json:"slug"`
-	Role      types.Role `json:"role"`
-	CreatedAt time.Time  `json:"created_at"`
+type UserResponse struct {
+	ID        *uuid.UUID  `json:"id,omitempty"`
+	Email     *string     `json:"email,omitempty"`
+	Username  string      `json:"username"`
+	Avatar    string      `json:"avatar"`
+	Slug      string      `json:"slug"`
+	Role      *types.Role `json:"role,omitempty"`
+	CreatedAt *time.Time  `json:"created_at,omitempty"`
+	UpdatedAt *time.Time  `json:"updated_at,omitempty"`
+	DeletedAt *time.Time  `json:"deleted_at,omitempty"`
 }
 
-func ToMe(u User) MeUser {
-	return MeUser{
-		ID:        u.ID,
-		Email:     u.Email,
+func ToMe(u User) UserResponse {
+	return UserResponse{
+		ID:        &u.ID,
+		Email:     &u.Email,
 		Username:  u.Username,
 		Avatar:    u.Avatar,
 		Slug:      u.Slug,
-		Role:      u.Role,
-		CreatedAt: u.CreatedAt,
+		Role:      &u.Role,
+		CreatedAt: &u.CreatedAt,
 	}
 }
 
-// Public user
-
-type PublicUser struct {
-	Username string `json:"username"`
-	Avatar   string `json:"avatar"`
-	Slug     string `json:"slug"`
-}
-
-func ToPublic(u User) PublicUser {
-	return PublicUser{
+func ToPublic(u User) UserResponse {
+	return UserResponse{
 		Username: u.Username,
 		Avatar:   u.Avatar,
 		Slug:     u.Slug,

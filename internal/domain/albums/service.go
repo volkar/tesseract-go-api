@@ -13,12 +13,14 @@ import (
 )
 
 type Service struct {
-	albums *Repository
+	albums        *Repository
+	albumsPerPage int
 }
 
-func NewService(repo *Repository) *Service {
+func NewService(repo *Repository, albumsPerPage int) *Service {
 	return &Service{
-		albums: repo,
+		albums:        repo,
+		albumsPerPage: albumsPerPage,
 	}
 }
 
@@ -33,7 +35,7 @@ func (s *Service) GetAvailable(ctx context.Context, userID uuid.UUID, albumSlug 
 	}
 	// Album found in cache or database. Check access permissions
 	isOwner := viewerID != uuid.Nil && viewerID == a.UserID
-	if !a.IsActive || !a.Access.CanAccess(a.SharedEmails, viewerEmail, isOwner) {
+	if (!a.IsActive && !isOwner) || !a.Access.CanAccess(a.SharedEmails, viewerEmail, isOwner) {
 		return Album{}, response.ErrAlbumNotFound
 	}
 	return a, nil
@@ -76,46 +78,46 @@ func (s *Service) GetByDirectToken(ctx context.Context, token uuid.UUID) (Album,
 }
 
 /* Get list of available albums by user id */
-func (s *Service) ListAvailable(ctx context.Context, userID uuid.UUID, viewerEmail string, cursor string, limit int) ([]AlbumInList, string, error) {
-	if limit <= 0 || limit > 60 {
-		limit = 60
+func (s *Service) ListAvailable(ctx context.Context, userID uuid.UUID, viewerEmail string, cursor string, limit int) ([]AlbumResponse, string, error) {
+	if limit <= 0 || limit > s.albumsPerPage {
+		limit = s.albumsPerPage
 	}
 
 	a, nextCursor, err := s.albums.ListAvailable(ctx, userID, viewerEmail, cursor, int32(limit))
 	if err != nil {
-		return []AlbumInList{}, "", err
+		return []AlbumResponse{}, "", err
 	}
 	// Map Albums to AlbumInList
-	albums := ToAlbumList(a)
+	albums := ToPublicAlbumList(a)
 	return albums, nextCursor, nil
 }
 
 /* Get list of all owned albums by user id */
-func (s *Service) ListOwned(ctx context.Context, userID uuid.UUID, cursor string, limit int) ([]AlbumInList, string, error) {
-	if limit <= 0 || limit > 60 {
-		limit = 60
+func (s *Service) ListOwned(ctx context.Context, userID uuid.UUID, cursor string, limit int) ([]AlbumResponse, string, error) {
+	if limit <= 0 || limit > s.albumsPerPage {
+		limit = s.albumsPerPage
 	}
 
 	a, nextCursor, err := s.albums.ListOwned(ctx, userID, cursor, int32(limit))
 	if err != nil {
-		return []AlbumInList{}, "", err
+		return []AlbumResponse{}, "", err
 	}
 	// Map Albums to AlbumInList
-	albums := ToAlbumList(a)
+	albums := ToMyAlbumList(a)
 	return albums, nextCursor, nil
 }
 
 /* Get list of trashed albums by user id */
-func (s *Service) ListTrashed(ctx context.Context, userID uuid.UUID, cursor string, limit int) ([]AlbumInList, string, error) {
-	if limit <= 0 || limit > 60 {
-		limit = 60
+func (s *Service) ListTrashed(ctx context.Context, userID uuid.UUID, cursor string, limit int) ([]AlbumResponse, string, error) {
+	if limit <= 0 || limit > s.albumsPerPage {
+		limit = s.albumsPerPage
 	}
 	a, nextCursor, err := s.albums.ListTrashed(ctx, userID, cursor, int32(limit))
 	if err != nil {
-		return []AlbumInList{}, "", err
+		return []AlbumResponse{}, "", err
 	}
 	// Map Albums to AlbumInList
-	albums := ToAlbumList(a)
+	albums := ToMyAlbumList(a)
 	return albums, nextCursor, nil
 }
 

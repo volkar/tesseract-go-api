@@ -17,6 +17,7 @@ type Config struct {
 	Lang            string `env:"APP_LANGUAGE" env-default:"en"`
 	FallbackLang    string `env:"APP_FALLBACK_LANGUAGE" env-default:"en"`
 	CursorSecretKey string `env:"CURSOR_SECRET_KEY" env-required:"true"`
+	AlbumsPerPage   int    `env:"ALBUMS_PER_PAGE" env-required:"true"`
 	Security        securityConfig
 	Cache           cacheConfig
 	Auth            authConfig

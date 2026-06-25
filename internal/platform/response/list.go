@@ -51,6 +51,7 @@ var (
 	ErrNoPermission       = &AppError{Code: http.StatusForbidden, Slug: "no_permission"}                 /* 403 Forbidden */
 	ErrTokenConsumed      = &AppError{Code: http.StatusUnauthorized, Slug: "token_consumed"}             /* 401 Unauthorized */
 	ErrTokenExpired       = &AppError{Code: http.StatusUnauthorized, Slug: "token_expired"}              /* 401 Unauthorized */
+	ErrTokenGracePeriod   = &AppError{Code: http.StatusOK, Slug: "token_grace_period"}                   /* 200 OK */
 	ErrNoRefreshToken     = &AppError{Code: http.StatusForbidden, Slug: "no_refresh_token"}              /* 403 Forbidden */
 	ErrRefreshSession     = &AppError{Code: http.StatusForbidden, Slug: "refresh_session"}               /* 403 Forbidden */
 	ErrOAuthNoEmail       = &AppError{Code: http.StatusBadRequest, Slug: "oauth_no_email"}               /* 400 Bad Request */

@@ -75,7 +75,7 @@ Deletes all other refresh tokens from database (logout from other devices)
 **GET** `/me/info`
 Authenticated user info
 
-**GET** `/me/albums/list`
+**GET** `/me/albums/list` (same as `/users/{my_user_slug}/albums`)
 Authenticated user list of all albums
 
 **GET** `/me/albums/trashed`
