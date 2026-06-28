@@ -174,7 +174,7 @@ func (app *app) PlaygroundGetUserCookies(w http.ResponseWriter, r *http.Request)
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    refresh,
-		Path:     "/auth",
+		Path:     "/",
 		HttpOnly: true,
 		Secure:   app.cfg.Cookie.Secure,
 		SameSite: app.cfg.Cookie.SameSite,
