@@ -86,19 +86,12 @@ func (app *app) ETagChecker(next http.Handler) http.Handler {
 }
 
 /* Parse and validate access token and insert user claims to context middleware */
-func (app *app) InsertClaimsToContext(next http.Handler) http.Handler {
+func (app *app) ParseAccessToken(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Skip access token validation entirely for the refresh endpoint
-		// Let the handler itself deal with the refresh_token
-		if r.URL.Path == "/auth/refresh" || r.URL.Path == "/auth/logout" {
-			next.ServeHTTP(w, r)
-			return
-		}
-
 		// Get token from cookie
 		cookie, err := r.Cookie("access_token")
 		if err != nil || cookie.Value == "" {
-			// No token, continue without claims
+			// No token, continue without claims (guest)
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -106,16 +99,26 @@ func (app *app) InsertClaimsToContext(next http.Handler) http.Handler {
 		// Validate token integrity and expiration
 		claims, err := app.tokens.ParseAccess(cookie.Value)
 		if err != nil || claims.UserID == uuid.Nil {
-			if strings.HasPrefix(r.URL.Path, "/auth/") {
-				// Token expired, allow for auth routes
+
+			// Define exceptions: routes that should gracefully ignore a dead access token
+			path := r.URL.Path
+			isAuthException := path == "/auth/refresh" ||
+				path == "/auth/logout" ||
+				(strings.HasPrefix(r.URL.Path, "/auth/") && strings.HasSuffix(path, "/provider")) ||
+				(strings.HasPrefix(r.URL.Path, "/auth/") && strings.HasSuffix(path, "/callback"))
+
+			if isAuthException {
+				// Soft fail: let the request through without claims.
+				// The specific handler will do its job (e.g. refresh will use refresh_token).
 				next.ServeHTTP(w, r)
 				return
-			} else {
-				// Invalid token, return 401 Unauthenticated error
-				app.cookies.UnsetAccessCookie(w)
-				app.response.Error(w, r, response.ErrAccessTokenExpired)
-				return
 			}
+
+			// Hard block: unset the dead cookie and return 401 Unauthorized
+			// The frontend will fetch a new token
+			app.cookies.UnsetAccessCookie(w)
+			app.response.Error(w, r, response.ErrAccessTokenExpired)
+			return
 		}
 
 		// Insert user claims to context
@@ -128,10 +131,10 @@ func (app *app) InsertClaimsToContext(next http.Handler) http.Handler {
 /* Require authentication middleware. Get user claims from context */
 func (app *app) RequireAuthentication(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Get claims from context
-		_, ok := tokens.GetClaimsFromContext(r.Context())
+		// Check claims in context
+		claims, ok := tokens.GetClaimsFromContext(r.Context())
 
-		if !ok {
+		if !ok || claims.UserID == uuid.Nil {
 			app.response.Error(w, r, response.ErrNoClaims)
 			return
 		}

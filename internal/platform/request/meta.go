@@ -26,24 +26,18 @@ func GetMetaFromRequest(r *http.Request) Metadata {
 		ip = r.RemoteAddr
 	}
 	// OS
-	os := "Unknown"
-	if ua.OS != "" && ua.OSVersion != "" {
-		os = ua.OS + " " + ua.OSVersion
-	} else if ua.OS != "" {
-		os = ua.OS
+	os := ua.OS
+	if os != "" && ua.OSVersion != "" {
+		os += " " + ua.OSVersion
 	}
 	// Browser
-	b := "Unknown"
-	if ua.Name != "" && ua.VersionNo.Major != 0 {
-		b = ua.Name + " " + strconv.Itoa(ua.VersionNo.Major)
-	} else if ua.Name != "" {
-		b = ua.Name
+	b := ua.Name
+	if b != "" && ua.VersionNo.Major != 0 {
+		b += " " + strconv.Itoa(ua.VersionNo.Major)
 	}
 	// Device
-	d := "Unknown"
-	if ua.Device != "" {
-		d = ua.Device
-	}
+	d := ua.Device
+
 	// Location can be extracted from IP by something like MaxMind GeoLite2
 	// Use IP as location for simplicity
 	l := ip

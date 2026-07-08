@@ -236,9 +236,10 @@ func (app *app) mount() http.Handler {
 	if app.cfg.Security.CheckOrigin {
 		r.Use(app.CheckOrigin)
 	}
-	// Data extraction middlewares
+	// Insert user accept-language header to context
 	r.Use(app.InsertLanguageToContext)
-	r.Use(app.InsertClaimsToContext)
+	// Parse access token and return 401 if token is invalid
+	r.Use(app.ParseAccessToken)
 	// ETag checker / setter
 	r.Use(app.ETagChecker)
 
