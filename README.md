@@ -133,9 +133,6 @@ Revoke direct share token for album
 **DELETE** `/albums/{album_id}`
 Delete album
 
-**DELETE** `/albums/{album_id}`
-Delete album
-
 **POST** `/albums/{album_id}/restore`
 Restore deleted album
 
