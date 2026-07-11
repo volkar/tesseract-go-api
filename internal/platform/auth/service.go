@@ -131,7 +131,7 @@ func (s *Service) RefreshSession(ctx context.Context, oldRefreshToken string, me
 
 		// 5-second grace period for network retries
 		if timeSinceConsumption < 5*time.Second {
-			return "", "", response.ErrTokenConsumed
+			return "", "", response.ErrTokenGracePeriod
 		}
 
 		// Real reuse detected outside grace period. Possible token stealing.
