@@ -24,22 +24,6 @@ func (q *Queries) CleanupRefreshTokens(ctx context.Context) error {
 	return err
 }
 
-const consumeOtherRefreshTokensForUser = `-- name: ConsumeOtherRefreshTokensForUser :exec
-UPDATE refresh_tokens
-SET is_consumed = true, updated_at = NOW()
-WHERE user_id = $1 AND token_hash != $2 AND is_consumed = false
-`
-
-type ConsumeOtherRefreshTokensForUserParams struct {
-	UserID    uuid.UUID `json:"user_id"`
-	TokenHash string    `json:"token_hash"`
-}
-
-func (q *Queries) ConsumeOtherRefreshTokensForUser(ctx context.Context, arg ConsumeOtherRefreshTokensForUserParams) error {
-	_, err := q.db.Exec(ctx, consumeOtherRefreshTokensForUser, arg.UserID, arg.TokenHash)
-	return err
-}
-
 const consumeRefreshTokenByHash = `-- name: ConsumeRefreshTokenByHash :execresult
 UPDATE refresh_tokens
 SET is_consumed = true, updated_at = NOW()
@@ -51,8 +35,8 @@ func (q *Queries) ConsumeRefreshTokenByHash(ctx context.Context, tokenHash strin
 }
 
 const createRefreshToken = `-- name: CreateRefreshToken :one
-INSERT INTO refresh_tokens (user_id, token_hash, expires_at, ip, ua, device, os, browser, location)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+INSERT INTO refresh_tokens (user_id, token_hash, expires_at, ip, ua, location)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id
 `
 
@@ -62,9 +46,6 @@ type CreateRefreshTokenParams struct {
 	ExpiresAt time.Time `json:"expires_at"`
 	Ip        string    `json:"ip"`
 	Ua        string    `json:"ua"`
-	Device    string    `json:"device"`
-	Os        string    `json:"os"`
-	Browser   string    `json:"browser"`
 	Location  string    `json:"location"`
 }
 
@@ -75,9 +56,6 @@ func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshToken
 		arg.ExpiresAt,
 		arg.Ip,
 		arg.Ua,
-		arg.Device,
-		arg.Os,
-		arg.Browser,
 		arg.Location,
 	)
 	var id uuid.UUID
@@ -94,8 +72,79 @@ func (q *Queries) DeleteAllRefreshTokensForUser(ctx context.Context, userID uuid
 	return err
 }
 
+const deleteOtherRefreshTokensForUser = `-- name: DeleteOtherRefreshTokensForUser :exec
+DELETE FROM refresh_tokens
+WHERE user_id = $1 AND token_hash != $2
+`
+
+type DeleteOtherRefreshTokensForUserParams struct {
+	UserID    uuid.UUID `json:"user_id"`
+	TokenHash string    `json:"token_hash"`
+}
+
+func (q *Queries) DeleteOtherRefreshTokensForUser(ctx context.Context, arg DeleteOtherRefreshTokensForUserParams) error {
+	_, err := q.db.Exec(ctx, deleteOtherRefreshTokensForUser, arg.UserID, arg.TokenHash)
+	return err
+}
+
+const deleteRefreshTokenByID = `-- name: DeleteRefreshTokenByID :one
+DELETE FROM refresh_tokens
+WHERE id = $1 AND user_id = $2
+RETURNING token_hash
+`
+
+type DeleteRefreshTokenByIDParams struct {
+	ID     uuid.UUID `json:"id"`
+	UserID uuid.UUID `json:"user_id"`
+}
+
+func (q *Queries) DeleteRefreshTokenByID(ctx context.Context, arg DeleteRefreshTokenByIDParams) (string, error) {
+	row := q.db.QueryRow(ctx, deleteRefreshTokenByID, arg.ID, arg.UserID)
+	var token_hash string
+	err := row.Scan(&token_hash)
+	return token_hash, err
+}
+
+const getActiveRefreshTokensForUser = `-- name: GetActiveRefreshTokensForUser :many
+SELECT id, user_id, token_hash, is_consumed, ip, ua, location, updated_at, expires_at, created_at
+FROM refresh_tokens
+WHERE user_id = $1 AND is_consumed = false AND expires_at > NOW()
+ORDER BY created_at DESC
+`
+
+func (q *Queries) GetActiveRefreshTokensForUser(ctx context.Context, userID uuid.UUID) ([]RefreshToken, error) {
+	rows, err := q.db.Query(ctx, getActiveRefreshTokensForUser, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []RefreshToken
+	for rows.Next() {
+		var i RefreshToken
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.TokenHash,
+			&i.IsConsumed,
+			&i.Ip,
+			&i.Ua,
+			&i.Location,
+			&i.UpdatedAt,
+			&i.ExpiresAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getRefreshTokenByHash = `-- name: GetRefreshTokenByHash :one
-SELECT id, user_id, token_hash, is_consumed, ip, ua, device, os, browser, location, updated_at, expires_at, created_at FROM refresh_tokens
+SELECT id, user_id, token_hash, is_consumed, ip, ua, location, updated_at, expires_at, created_at FROM refresh_tokens
 WHERE token_hash = $1
 LIMIT 1
 `
@@ -110,9 +159,6 @@ func (q *Queries) GetRefreshTokenByHash(ctx context.Context, tokenHash string) (
 		&i.IsConsumed,
 		&i.Ip,
 		&i.Ua,
-		&i.Device,
-		&i.Os,
-		&i.Browser,
 		&i.Location,
 		&i.UpdatedAt,
 		&i.ExpiresAt,

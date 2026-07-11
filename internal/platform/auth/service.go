@@ -81,19 +81,35 @@ func (s *Service) IssueSessionTokens(ctx context.Context, user users.User, meta 
 }
 
 /* Consume refresh token */
-func (s *Service) ConsumeRefreshToken(ctx context.Context, token string) error {
+func (s *Service) ConsumeSessionToken(ctx context.Context, token string) error {
 	hash := s.tokens.Hash(token)
 	return s.tokens.ConsumeRefreshByHash(ctx, hash)
 }
 
-/* Consume other refresh tokens (exit from all devices) */
-func (s *Service) ConsumeOtherRefreshTokens(ctx context.Context, userID uuid.UUID, refresh string) error {
+/* Revoke other sessions (exit from all devices) */
+func (s *Service) SessionList(ctx context.Context, userID uuid.UUID, currentRefresh string) ([]tokens.Session, error) {
+	currentHash := s.tokens.Hash(currentRefresh)
+	return s.tokens.GetActiveRefreshes(ctx, userID, currentHash)
+}
+
+/* Revoke other sessions (exit from all devices) */
+func (s *Service) RevokeSession(ctx context.Context, tokenID uuid.UUID, userID uuid.UUID, currentRefresh string) (bool, error) {
+	deletedHash, err := s.tokens.DeleteRefreshByID(ctx, tokenID, userID)
+	if err != nil {
+		return false, err
+	}
+	currentHash := s.tokens.Hash(currentRefresh)
+	return currentHash == deletedHash, nil
+}
+
+/* Delete other refresh tokens (exit from all devices) */
+func (s *Service) DeleteOtherSessions(ctx context.Context, userID uuid.UUID, refresh string) error {
 	hash := s.tokens.Hash(refresh)
-	return s.tokens.ConsumeOtherRefreshForUser(ctx, userID, hash)
+	return s.tokens.DeleteOtherRefreshForUser(ctx, userID, hash)
 }
 
 /* Delete old refresh token and get a new one */
-func (s *Service) RotateRefreshToken(ctx context.Context, oldRefreshToken string, meta request.Metadata) (string, string, error) {
+func (s *Service) RefreshSession(ctx context.Context, oldRefreshToken string, meta request.Metadata) (string, string, error) {
 	// Old refresh token hash
 	oldHash := s.tokens.Hash(oldRefreshToken)
 

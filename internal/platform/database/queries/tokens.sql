@@ -1,6 +1,6 @@
 -- name: CreateRefreshToken :one
-INSERT INTO refresh_tokens (user_id, token_hash, expires_at, ip, ua, device, os, browser, location)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+INSERT INTO refresh_tokens (user_id, token_hash, expires_at, ip, ua, location)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id;
 
 -- name: GetRefreshTokenByHash :one
@@ -13,10 +13,20 @@ UPDATE refresh_tokens
 SET is_consumed = true, updated_at = NOW()
 WHERE token_hash = $1 AND is_consumed = false;
 
--- name: ConsumeOtherRefreshTokensForUser :exec
-UPDATE refresh_tokens
-SET is_consumed = true, updated_at = NOW()
-WHERE user_id = $1 AND token_hash != $2 AND is_consumed = false;
+-- name: GetActiveRefreshTokensForUser :many
+SELECT *
+FROM refresh_tokens
+WHERE user_id = $1 AND is_consumed = false AND expires_at > NOW()
+ORDER BY created_at DESC;
+
+-- name: DeleteRefreshTokenByID :one
+DELETE FROM refresh_tokens
+WHERE id = $1 AND user_id = $2
+RETURNING token_hash;
+
+-- name: DeleteOtherRefreshTokensForUser :exec
+DELETE FROM refresh_tokens
+WHERE user_id = $1 AND token_hash != $2;
 
 -- name: DeleteAllRefreshTokensForUser :exec
 DELETE FROM refresh_tokens WHERE user_id = $1;

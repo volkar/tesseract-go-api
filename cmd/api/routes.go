@@ -23,7 +23,9 @@ func (app *app) Routes(r *chi.Mux) {
 		r.Group(func(r chi.Router) {
 			r.Use(app.RequireAuthentication)
 			// Auth user only
-			r.Post("/auth/logout-others", app.authHandler.TerminateOtherSessions)
+			r.Post("/auth/logout-others", app.authHandler.RevokeOtherSessions)
+			r.Get("/auth/sessions", app.authHandler.GetSessions)
+			r.Delete(fmt.Sprintf("/auth/sessions/{uuid:%s}", UUIDRegex), app.authHandler.RevokeSession)
 		})
 	})
 

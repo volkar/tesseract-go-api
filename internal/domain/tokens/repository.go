@@ -4,9 +4,11 @@ import (
 	db "api/internal/platform/database/sqlc"
 	"api/internal/platform/response"
 	"context"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -23,16 +25,13 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 }
 
 /* Create token with given user id, hash and expiration time */
-func (r *Repository) Create(ctx context.Context, userID uuid.UUID, tokenHash string, expiresAt time.Time, ip string, ua string, device string, os string, browser string, location string) (uuid.UUID, error) {
+func (r *Repository) Create(ctx context.Context, userID uuid.UUID, tokenHash string, expiresAt time.Time, ip string, ua string, location string) (uuid.UUID, error) {
 	return r.q.CreateRefreshToken(ctx, db.CreateRefreshTokenParams{
 		UserID:    userID,
 		TokenHash: tokenHash,
 		ExpiresAt: expiresAt,
 		Ip:        ip,
 		Ua:        ua,
-		Device:    device,
-		Os:        os,
-		Browser:   browser,
 		Location:  location,
 	})
 }
@@ -48,15 +47,35 @@ func (r *Repository) ConsumeByHash(ctx context.Context, hash string) error {
 	return err
 }
 
-/* Consume other tokens for given user id except given hash */
-func (r *Repository) ConsumeOtherForUser(ctx context.Context, userID uuid.UUID, exceptHash string) error {
-	return r.q.ConsumeOtherRefreshTokensForUser(ctx, db.ConsumeOtherRefreshTokensForUserParams{
+/* Get all active refresh tokens for user */
+func (r *Repository) GetActiveForUser(ctx context.Context, userID uuid.UUID) ([]db.RefreshToken, error) {
+	return r.q.GetActiveRefreshTokensForUser(ctx, userID)
+}
+
+/* Delete refresh token by ID and User ID */
+func (r *Repository) DeleteByIDAndUser(ctx context.Context, id uuid.UUID, userID uuid.UUID) (string, error) {
+	hash, err := r.q.DeleteRefreshTokenByID(ctx, db.DeleteRefreshTokenByIDParams{
+		ID:     id,
+		UserID: userID,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", response.ErrBadUUID
+		}
+		return "", err
+	}
+	return hash, nil
+}
+
+/* Delete other tokens for given user ID except given hash */
+func (r *Repository) DeleteOtherForUser(ctx context.Context, userID uuid.UUID, exceptHash string) error {
+	return r.q.DeleteOtherRefreshTokensForUser(ctx, db.DeleteOtherRefreshTokensForUserParams{
 		UserID:    userID,
 		TokenHash: exceptHash,
 	})
 }
 
-/* Delete all tokens for given user id */
+/* Delete all tokens for given user ID */
 func (r *Repository) DeleteAllRefreshForUser(ctx context.Context, userID uuid.UUID) error {
 	return r.q.DeleteAllRefreshTokensForUser(ctx, userID)
 }
@@ -67,7 +86,7 @@ func (r *Repository) Cleanup(ctx context.Context) error {
 }
 
 /* Consume old token and create new one in single transaction */
-func (r *Repository) ReplaceInTransaction(ctx context.Context, userID uuid.UUID, oldHash string, newHash string, expiresAt time.Time, ip string, ua string, device string, os string, browser string, location string) error {
+func (r *Repository) ReplaceInTransaction(ctx context.Context, userID uuid.UUID, oldHash string, newHash string, expiresAt time.Time, ip string, ua string, location string) error {
 	// Transaction pool and query
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
@@ -92,9 +111,6 @@ func (r *Repository) ReplaceInTransaction(ctx context.Context, userID uuid.UUID,
 		ExpiresAt: expiresAt,
 		Ip:        ip,
 		Ua:        ua,
-		Device:    device,
-		Os:        os,
-		Browser:   browser,
 		Location:  location,
 	})
 	if err != nil {

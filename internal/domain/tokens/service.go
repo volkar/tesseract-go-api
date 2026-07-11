@@ -66,12 +66,12 @@ func (m *Manager) GetRefreshByHash(ctx context.Context, hash string) (db.Refresh
 
 /* Create refresh token */
 func (m *Manager) CreateRefresh(ctx context.Context, userID uuid.UUID, tokenHash string, expiresAt time.Time, meta request.Metadata) (uuid.UUID, error) {
-	return m.tokens.Create(ctx, userID, tokenHash, expiresAt, meta.IP, meta.UserAgent, meta.Device, meta.Os, meta.Browser, meta.Location)
+	return m.tokens.Create(ctx, userID, tokenHash, expiresAt, meta.IP, meta.UserAgent, meta.Location)
 }
 
 /* Delete old token and create new one in single transaction */
 func (m *Manager) ReplaceRefresh(ctx context.Context, userID uuid.UUID, oldHash string, newHash string, expiresAt time.Time, meta request.Metadata) error {
-	return m.tokens.ReplaceInTransaction(ctx, userID, oldHash, newHash, expiresAt, meta.IP, meta.UserAgent, meta.Device, meta.Os, meta.Browser, meta.Location)
+	return m.tokens.ReplaceInTransaction(ctx, userID, oldHash, newHash, expiresAt, meta.IP, meta.UserAgent, meta.Location)
 }
 
 /* Consume one token by hash */
@@ -79,17 +79,28 @@ func (m *Manager) ConsumeRefreshByHash(ctx context.Context, hash string) error {
 	return m.tokens.ConsumeByHash(ctx, hash)
 }
 
-/* Consume all tokens for given user id */
-func (m *Manager) ConsumeAllRefreshForUser(ctx context.Context, userID uuid.UUID) error {
-	return m.tokens.ConsumeOtherForUser(ctx, userID, "")
+/* Get active refresh tokens for user, identifying the current one by token hash */
+func (m *Manager) GetActiveRefreshes(ctx context.Context, userID uuid.UUID, currentHash string) ([]Session, error) {
+	tokens, err := m.tokens.GetActiveForUser(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Map to Sessions and return
+	return FromDBList(tokens, currentHash), nil
 }
 
-/* Consume other tokens for given user id except given hash */
-func (m *Manager) ConsumeOtherRefreshForUser(ctx context.Context, userID uuid.UUID, hash string) error {
-	return m.tokens.ConsumeOtherForUser(ctx, userID, hash)
+/* Delete specific refresh token by ID */
+func (m *Manager) DeleteRefreshByID(ctx context.Context, sessionID uuid.UUID, userID uuid.UUID) (string, error) {
+	return m.tokens.DeleteByIDAndUser(ctx, sessionID, userID)
 }
 
-/* Delete all tokens for given user id */
+/* Delete other tokens for given user ID except given hash */
+func (m *Manager) DeleteOtherRefreshForUser(ctx context.Context, userID uuid.UUID, hash string) error {
+	return m.tokens.DeleteOtherForUser(ctx, userID, hash)
+}
+
+/* Delete all refresh tokens for given user ID */
 func (m *Manager) DeleteAllRefreshForUser(ctx context.Context, userID uuid.UUID) error {
 	return m.tokens.DeleteAllRefreshForUser(ctx, userID)
 }
@@ -118,7 +129,7 @@ func (m *Manager) ParseAccess(tokenStr string) (types.UserClaims, error) {
 		return types.UserClaims{}, err
 	}
 
-	// User id
+	// User ID
 	userID, err := token.GetString("user_id")
 	if err != nil {
 		return types.UserClaims{}, err

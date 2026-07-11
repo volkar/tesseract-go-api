@@ -36,9 +36,6 @@ type RefreshToken struct {
 	IsConsumed bool               `json:"is_consumed"`
 	Ip         string             `json:"ip"`
 	Ua         string             `json:"ua"`
-	Device     string             `json:"device"`
-	Os         string             `json:"os"`
-	Browser    string             `json:"browser"`
 	Location   string             `json:"location"`
 	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
 	ExpiresAt  time.Time          `json:"expires_at"`

@@ -70,6 +70,12 @@ Deletes token cookies and refresh token from database
 **POST** `/auth/logout-others`
 Deletes all other refresh tokens from database (logout from other devices)
 
+**GET** `/auth/sessions`
+Get active refresh tokens for user, identifying the current one
+
+**DELETE** `/auth/sessions/{token_id}`
+Delete refresh token
+
 ## Authenticated user endpoints
 
 **GET** `/me/info`

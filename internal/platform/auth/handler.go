@@ -12,6 +12,7 @@ import (
 	"slices"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/markbates/goth/gothic"
 )
 
@@ -98,7 +99,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("refresh_token")
 	if err == nil && cookie.Value != "" {
 		// Consume old refresh token
-		err = h.auth.ConsumeRefreshToken(r.Context(), cookie.Value)
+		err = h.auth.ConsumeSessionToken(r.Context(), cookie.Value)
 		if err != nil {
 			h.logger.Warn("Logout: old refresh token consumption error", "error", err)
 		}
@@ -111,8 +112,63 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	h.response.Success(w, r, response.SuccessLoggedOut)
 }
 
+// Get list of active sessions
+func (h *Handler) GetSessions(w http.ResponseWriter, r *http.Request) {
+	claims, ok := tokens.GetClaimsFromContext(r.Context())
+	if !ok {
+		h.response.Error(w, r, response.ErrNoClaims)
+		return
+	}
+
+	// Try to get current refresh token hash to identify current session
+	currentRefreshToken := ""
+	if cookie, err := r.Cookie("refresh_token"); err == nil && cookie.Value != "" {
+		currentRefreshToken = cookie.Value
+	}
+
+	sessions, err := h.auth.SessionList(r.Context(), claims.UserID, currentRefreshToken)
+	if err != nil {
+		h.response.Error(w, r, err)
+		return
+	}
+
+	h.response.SuccessDataOnly(w, r, sessions)
+}
+
+/* Revoke specific session by ID */
+func (h *Handler) RevokeSession(w http.ResponseWriter, r *http.Request) {
+	claims, _ := tokens.GetClaimsFromContext(r.Context())
+
+	sessionID, err := uuid.Parse(chi.URLParam(r, "uuid"))
+	if err != nil {
+		h.response.Error(w, r, response.ErrBadUUID)
+		return
+	}
+
+	currentRefreshToken := ""
+	if cookie, err := r.Cookie("refresh_token"); err == nil && cookie.Value != "" {
+		currentRefreshToken = cookie.Value
+	}
+
+	isDeletedCurrent, err := h.auth.RevokeSession(r.Context(), sessionID, claims.UserID, currentRefreshToken)
+	if err != nil {
+		h.response.Error(w, r, err)
+		return
+	}
+
+	// Deleted session is current user's session, clear cookies
+	if isDeletedCurrent {
+		h.cookies.UnsetAccessCookie(w)
+		h.cookies.UnsetRefreshCookie(w)
+	}
+
+	h.response.SuccessWithData(w, r, response.SuccessSessionRevoked, map[string]bool{
+		"is_current": isDeletedCurrent,
+	})
+}
+
 /* Logout from other devices */
-func (h *Handler) TerminateOtherSessions(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) RevokeOtherSessions(w http.ResponseWriter, r *http.Request) {
 	// Get claims
 	claims, ok := tokens.GetClaimsFromContext(r.Context())
 	if !ok {
@@ -128,8 +184,8 @@ func (h *Handler) TerminateOtherSessions(w http.ResponseWriter, r *http.Request)
 	}
 	refresh := cookie.Value
 
-	// Consume other refresh tokens (exit from other devices)
-	h.auth.ConsumeOtherRefreshTokens(r.Context(), claims.UserID, refresh)
+	// Delete other refresh tokens (exit from other devices)
+	h.auth.DeleteOtherSessions(r.Context(), claims.UserID, refresh)
 
 	h.response.Success(w, r, response.SuccessLoggedOutOthers)
 }
@@ -150,7 +206,7 @@ func (h *Handler) RefreshSession(w http.ResponseWriter, r *http.Request) {
 	// Get metadata for refresh token
 	meta := request.GetMetaFromRequest(r)
 	// Exchange old refresh token
-	newAccess, newRefresh, err := h.auth.RotateRefreshToken(r.Context(), oldRefreshToken, meta)
+	newAccess, newRefresh, err := h.auth.RefreshSession(r.Context(), oldRefreshToken, meta)
 	if err != nil {
 		if errors.Is(err, response.ErrTokenGracePeriod) {
 			// Refresh attempt in grace period, cookies was set in prev request

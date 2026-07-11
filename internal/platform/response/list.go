@@ -88,6 +88,7 @@ var (
 	SuccessAlbumPurged          = &AppSuccess{Code: http.StatusOK, Slug: "album_purged"}           /* 200 OK */
 	SuccessLoggedOut            = &AppSuccess{Code: http.StatusOK, Slug: "logged_out"}             /* 200 OK */
 	SuccessLoggedOutOthers      = &AppSuccess{Code: http.StatusOK, Slug: "logged_out_others"}      /* 200 OK */
+	SuccessSessionRevoked       = &AppSuccess{Code: http.StatusOK, Slug: "session_revoked"}        /* 200 OK */
 	SuccessUserDeleted          = &AppSuccess{Code: http.StatusOK, Slug: "user_deleted"}           /* 200 OK */
 	SuccessUserUpdated          = &AppSuccess{Code: http.StatusOK, Slug: "user_updated"}           /* 200 OK */
 	SuccessUserRestored         = &AppSuccess{Code: http.StatusOK, Slug: "user_restored"}          /* 200 OK */

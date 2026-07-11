@@ -73,7 +73,7 @@ type AlbumResponse struct {
 	Access       *types.Access `json:"access,omitempty"`
 	DirectToken  *string       `json:"direct_token,omitempty"`
 	SharedEmails *[]string     `json:"shared_emails,omitempty"`
-	DateAt       time.Time     `json:"date_at,omitempty"`
+	DateAt       time.Time     `json:"date_at"`
 	IsActive     *bool         `json:"is_active,omitempty"`
 	CreatedAt    *time.Time    `json:"created_at,omitempty"`
 	UpdatedAt    *time.Time    `json:"updated_at,omitempty"`

@@ -13,12 +13,14 @@ import (
 
 type Querier interface {
 	CleanupRefreshTokens(ctx context.Context) error
-	ConsumeOtherRefreshTokensForUser(ctx context.Context, arg ConsumeOtherRefreshTokensForUserParams) error
 	ConsumeRefreshTokenByHash(ctx context.Context, tokenHash string) (pgconn.CommandTag, error)
 	CreateAlbum(ctx context.Context, arg CreateAlbumParams) (Album, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (uuid.UUID, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteAllRefreshTokensForUser(ctx context.Context, userID uuid.UUID) error
+	DeleteOtherRefreshTokensForUser(ctx context.Context, arg DeleteOtherRefreshTokensForUserParams) error
+	DeleteRefreshTokenByID(ctx context.Context, arg DeleteRefreshTokenByIDParams) (string, error)
+	GetActiveRefreshTokensForUser(ctx context.Context, userID uuid.UUID) ([]RefreshToken, error)
 	GetAlbum(ctx context.Context, arg GetAlbumParams) (Album, error)
 	GetAlbumByDirectToken(ctx context.Context, directToken uuid.NullUUID) (Album, error)
 	GetAlbumBySlug(ctx context.Context, arg GetAlbumBySlugParams) (Album, error)

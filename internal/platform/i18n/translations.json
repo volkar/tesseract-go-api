@@ -12,6 +12,7 @@
         "album_purged": "Album has been permanently deleted",
         "logged_out": "You have been successfully logged out",
         "logged_out_others": "You have been successfully logged out from other devices",
+        "session_revoked": "Session has been successfully revoked",
         "user_deleted": "User account has been successfully deleted",
         "user_updated": "User account has been successfully updated",
         "user_restored": "User account has been successfully restored",
