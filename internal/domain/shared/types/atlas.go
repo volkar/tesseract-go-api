@@ -2,8 +2,9 @@ package types
 
 // AtlasItemMeta contains specific metadata for atlas elements, like dimensions
 type AtlasItemMeta struct {
-	Width  int `json:"width,omitempty"`
-	Height int `json:"height,omitempty"`
+	Width  int    `json:"width,omitempty"`
+	Height int    `json:"height,omitempty"`
+	Title  string `json:"title,omitempty"`
 }
 
 // AtlasItem represents an item in the album's atlas
