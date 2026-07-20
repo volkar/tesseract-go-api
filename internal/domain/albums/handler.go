@@ -16,6 +16,32 @@ import (
 	"github.com/google/uuid"
 )
 
+type CreateRequest struct {
+	Title        string       `json:"title" validate:"required,min=2,max=255"`
+	Atlas        types.Atlas  `json:"atlas" validate:"required,min=1,dive"`
+	Access       types.Access `json:"access" validate:"required"`
+	SharedEmails []string     `json:"shared_emails"`
+	Slug         string       `json:"slug" validate:"required,min=3,max=255,slug"`
+	Cover        string       `json:"cover" validate:"required,url"`
+	DateAt       time.Time    `json:"date_at" validate:"required"`
+	IsActive     bool         `json:"is_active"`
+}
+
+type UpdateRequest struct {
+	Title        string       `json:"title" validate:"required,min=2,max=255"`
+	Atlas        types.Atlas  `json:"atlas" validate:"required,min=1,dive"`
+	Access       types.Access `json:"access" validate:"required"`
+	SharedEmails []string     `json:"shared_emails"`
+	Slug         string       `json:"slug" validate:"required,min=3,max=255,slug"`
+	Cover        string       `json:"cover" validate:"required,url"`
+	DateAt       time.Time    `json:"date_at" validate:"required"`
+	IsActive     bool         `json:"is_active"`
+}
+
+type ToggleActiveRequest struct {
+	IsActive bool `json:"is_active"`
+}
+
 type Handler struct {
 	albums        *Service
 	users         UserGetter
@@ -221,30 +247,22 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var req CreateRequest
+
 	// JSON decode
-	input := struct {
-		Title        string       `json:"title" validate:"required,min=2,max=255"`
-		Atlas        types.Atlas  `json:"atlas" validate:"required,min=1,dive"`
-		Access       types.Access `json:"access" validate:"required"`
-		SharedEmails []string     `json:"shared_emails"`
-		Slug         string       `json:"slug" validate:"required,min=3,max=255,slug"`
-		Cover        string       `json:"cover" validate:"required,url"`
-		DateAt       time.Time    `json:"date_at" validate:"required"`
-		IsActive     bool         `json:"is_active"`
-	}{}
-	if err := request.DecodeJSONBody(w, r, &input); err != nil {
+	if err := request.DecodeJSONBody(w, r, &req); err != nil {
 		h.response.Error(w, r, response.ErrBadJSON.Wrap(err))
 		return
 	}
 
 	// Validate input
-	if err := h.validator.Struct(&input); err != nil {
+	if err := h.validator.Struct(&req); err != nil {
 		h.response.ValidationError(w, r, err)
 		return
 	}
 
 	// Create album
-	album, err := h.albums.Create(r.Context(), claims.UserID, input.Title, input.Slug, input.Cover, input.Atlas, input.Access, input.SharedEmails, input.IsActive, input.DateAt)
+	album, err := h.albums.Create(r.Context(), claims.UserID, req)
 	if err != nil {
 		h.response.Error(w, r, err)
 		return
@@ -270,30 +288,22 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var req UpdateRequest
+
 	// JSON decode
-	input := struct {
-		Title        string       `json:"title" validate:"required,min=2,max=255"`
-		Atlas        types.Atlas  `json:"atlas" validate:"required,min=1,dive"`
-		Access       types.Access `json:"access" validate:"required"`
-		SharedEmails []string     `json:"shared_emails"`
-		Slug         string       `json:"slug" validate:"required,min=3,max=255,slug"`
-		Cover        string       `json:"cover" validate:"required,url"`
-		DateAt       time.Time    `json:"date_at" validate:"required"`
-		IsActive     bool         `json:"is_active"`
-	}{}
-	if err := request.DecodeJSONBody(w, r, &input); err != nil {
+	if err := request.DecodeJSONBody(w, r, &req); err != nil {
 		h.response.Error(w, r, response.ErrBadJSON.Wrap(err))
 		return
 	}
 
 	// Validate input
-	if err := h.validator.Struct(&input); err != nil {
+	if err := h.validator.Struct(&req); err != nil {
 		h.response.ValidationError(w, r, err)
 		return
 	}
 
 	// Update album
-	album, err := h.albums.Update(r.Context(), claims.UserID, albumID, input.Title, input.Slug, input.Cover, input.Atlas, input.Access, input.SharedEmails, input.DateAt, input.IsActive)
+	album, err := h.albums.Update(r.Context(), claims.UserID, albumID, req)
 	if err != nil {
 		h.response.Error(w, r, err)
 		return
@@ -375,29 +385,28 @@ func (h *Handler) ToggleActive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var req ToggleActiveRequest
+
 	// JSON decode
-	input := struct {
-		IsActive bool `json:"is_active"`
-	}{}
-	if err := request.DecodeJSONBody(w, r, &input); err != nil {
+	if err := request.DecodeJSONBody(w, r, &req); err != nil {
 		h.response.Error(w, r, response.ErrBadJSON.Wrap(err))
 		return
 	}
 
 	// Validate input
-	if err := h.validator.Struct(&input); err != nil {
+	if err := h.validator.Struct(&req); err != nil {
 		h.response.ValidationError(w, r, err)
 		return
 	}
 
 	// Update album
-	album, err := h.albums.ToggleActive(r.Context(), claims.UserID, albumID, input.IsActive)
+	album, err := h.albums.ToggleActive(r.Context(), claims.UserID, albumID, req.IsActive)
 	if err != nil {
 		h.response.Error(w, r, err)
 		return
 	}
 
-	if input.IsActive {
+	if req.IsActive {
 		h.response.SuccessWithData(w, r, response.SuccessAlbumActive, album)
 	} else {
 		h.response.SuccessWithData(w, r, response.SuccessAlbumInactive, album)

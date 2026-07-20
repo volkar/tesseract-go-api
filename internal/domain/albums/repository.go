@@ -1,7 +1,6 @@
 package albums
 
 import (
-	"api/internal/domain/shared/types"
 	"api/internal/platform/cache"
 	"api/internal/platform/cursor"
 	db "api/internal/platform/database/sqlc"
@@ -279,17 +278,17 @@ func (r *Repository) ListTrashed(ctx context.Context, userID uuid.UUID, cursor s
 }
 
 /* Create album */
-func (r *Repository) Create(ctx context.Context, title string, slug string, cover string, atlas types.Atlas, access types.Access, sharedEmails []string, isActive bool, dateAt time.Time, userID uuid.UUID) (Album, error) {
+func (r *Repository) Create(ctx context.Context, userID uuid.UUID, req CreateRequest) (Album, error) {
 	a, err := r.q.CreateAlbum(ctx, db.CreateAlbumParams{
 		UserID:       userID,
-		Title:        title,
-		Slug:         slug,
-		Cover:        cover,
-		Atlas:        atlas,
-		Access:       access,
-		IsActive:     isActive,
-		SharedEmails: sharedEmails,
-		DateAt:       dateAt,
+		Title:        req.Title,
+		Slug:         req.Slug,
+		Cover:        req.Cover,
+		Atlas:        req.Atlas,
+		Access:       req.Access,
+		IsActive:     req.IsActive,
+		SharedEmails: req.SharedEmails,
+		DateAt:       req.DateAt,
 	})
 	if err != nil {
 		return Album{}, err
@@ -308,18 +307,18 @@ func (r *Repository) Create(ctx context.Context, title string, slug string, cove
 }
 
 /* Update album */
-func (r *Repository) Update(ctx context.Context, userID uuid.UUID, albumID uuid.UUID, title string, slug string, cover string, atlas types.Atlas, access types.Access, sharedEmails []string, dateAt time.Time, isActive bool) (Album, error) {
+func (r *Repository) Update(ctx context.Context, userID uuid.UUID, albumID uuid.UUID, req UpdateRequest) (Album, error) {
 	a, err := r.q.UpdateAlbum(ctx, db.UpdateAlbumParams{
 		AlbumID:      albumID,
 		UserID:       userID,
-		Title:        title,
-		Slug:         slug,
-		Cover:        cover,
-		Atlas:        atlas,
-		Access:       access,
-		SharedEmails: sharedEmails,
-		DateAt:       dateAt,
-		IsActive:     isActive,
+		Title:        req.Title,
+		Slug:         req.Slug,
+		Cover:        req.Cover,
+		Atlas:        req.Atlas,
+		Access:       req.Access,
+		SharedEmails: req.SharedEmails,
+		DateAt:       req.DateAt,
+		IsActive:     req.IsActive,
 	})
 	if err != nil {
 		return Album{}, err

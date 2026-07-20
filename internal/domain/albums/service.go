@@ -1,11 +1,9 @@
 package albums
 
 import (
-	"api/internal/domain/shared/types"
 	"api/internal/platform/response"
 	"context"
 	"errors"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -122,18 +120,18 @@ func (s *Service) ListTrashed(ctx context.Context, userID uuid.UUID, cursor stri
 }
 
 /* Create album */
-func (s *Service) Create(ctx context.Context, userID uuid.UUID, title string, slug string, cover string, atlas types.Atlas, access types.Access, share []string, isActive bool, dateAt time.Time) (Album, error) {
-	a, err := s.albums.Create(ctx, title, slug, cover, atlas, access, share, isActive, dateAt, userID)
+func (s *Service) Create(ctx context.Context, userID uuid.UUID, req CreateRequest) (Album, error) {
+	a, err := s.albums.Create(ctx, userID, req)
 	if err != nil {
 		var pgErr *pgconn.PgError
+		if errors.Is(err, pgx.ErrNoRows) {
+			// User deleted or not existed
+			return Album{}, response.ErrNoPermission.Wrap(err)
+		}
 		if errors.As(err, &pgErr) {
 			if (pgErr.Code == "23505") && (pgErr.ConstraintName == "idx_albums_user_slug_active") {
 				return Album{}, response.ErrAlbumSlugExists.Wrap(err)
 			}
-		}
-		if errors.Is(err, pgx.ErrNoRows) {
-			// User deleted or not existed
-			return Album{}, response.ErrNoPermission.Wrap(err)
 		}
 		return Album{}, err
 	}
@@ -141,8 +139,8 @@ func (s *Service) Create(ctx context.Context, userID uuid.UUID, title string, sl
 }
 
 /* Update album */
-func (s *Service) Update(ctx context.Context, userID uuid.UUID, albumID uuid.UUID, title string, slug string, cover string, atlas types.Atlas, access types.Access, sharedEmails []string, dateAt time.Time, isActive bool) (Album, error) {
-	a, err := s.albums.Update(ctx, userID, albumID, title, slug, cover, atlas, access, sharedEmails, dateAt, isActive)
+func (s *Service) Update(ctx context.Context, userID uuid.UUID, albumID uuid.UUID, req UpdateRequest) (Album, error) {
+	a, err := s.albums.Update(ctx, userID, albumID, req)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Album not found or user is deleted

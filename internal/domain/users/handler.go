@@ -13,6 +13,12 @@ import (
 	"github.com/google/uuid"
 )
 
+type UpdateRequest struct {
+	Username string `json:"username" validate:"required,min=2,max=255"`
+	Slug     string `json:"slug" validate:"required,min=3,max=255,slug,notreserved"`
+	Avatar   string `json:"avatar" validate:"max=255"`
+}
+
 type Handler struct {
 	users     *Service
 	response  *response.Response
@@ -90,36 +96,34 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var req UpdateRequest
+
 	// JSON decode
-	input := struct {
-		Username string `json:"username" validate:"required,min=2,max=255"`
-		Slug     string `json:"slug" validate:"required,min=3,max=255,slug,notreserved"`
-		Avatar   string `json:"avatar" validate:"max=255"`
-	}{}
-	if err := request.DecodeJSONBody(w, r, &input); err != nil {
+	if err := request.DecodeJSONBody(w, r, &req); err != nil {
 		h.response.Error(w, r, response.ErrBadJSON.Wrap(err))
 		return
 	}
 
 	// Validate input
-	if err := h.validator.Struct(&input); err != nil {
+	if err := h.validator.Struct(&req); err != nil {
 		h.response.ValidationError(w, r, err)
 		return
 	}
 
-	avatar := input.Avatar
+	avatar := req.Avatar
 	// Avatar URL check
-	if input.Avatar != "" {
-		securedAvatar, secErr := utils.ValidateAndSanitizeURL(input.Avatar)
+	if req.Avatar != "" {
+		securedAvatar, secErr := utils.ValidateAndSanitizeURL(req.Avatar)
 		if secErr != nil {
 			// Return 400 Bad Request to the user
 			h.response.Error(w, r, response.ErrInvalidImageURL.Wrap(secErr))
 		}
 		avatar = securedAvatar
 	}
+	req.Avatar = avatar
 
 	// Update user
-	u, err := h.users.Update(r.Context(), updatingUserID, input.Slug, input.Username, avatar)
+	u, err := h.users.Update(r.Context(), updatingUserID, req)
 	if err != nil {
 		h.response.Error(w, r, err)
 		return

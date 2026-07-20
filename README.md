@@ -217,21 +217,21 @@ curl -X GET http://localhost:8000/health
 
 8. Now you can use `Playground routes` to create `admin` and `user` and test this API.
 
+## License
+
+Released under the [MIT License](LICENSE).
+
 ## ❤️ Support
 
 Tesseract is completely free and open-source. If it made your backend work a little brighter, you can fuel its future updates via the **Sponsor** button or through my [Support Page](https://support.syntheticsymbiosis.com).
 
 Your contributions go directly towards project maintenance, late-night caffeine, and I will *definitely* not use them to save up for a 1969 Ford Mustang. Promise.
 
-## License
-
-Released under the [MIT License](LICENSE).
-
 ## Contact & Contributions
 
 Feel free to reach out to me!
 
--   Email: sergey@volkar.ru
 -   Telegram: @sergeyvolkar
+-   Email: sergey@volkar.ru
 
 All pull requests are welcome!

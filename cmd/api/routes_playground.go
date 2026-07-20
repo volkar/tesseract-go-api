@@ -1,6 +1,7 @@
 package main
 
 import (
+	"api/internal/domain/albums"
 	"api/internal/domain/shared/types"
 	"api/internal/platform/request"
 	"net/http"
@@ -40,10 +41,10 @@ func (app *app) PlaygroundCreateAdmin(w http.ResponseWriter, r *http.Request) {
 
 	atlas := GetDefaultAtlas()
 
-	app.albumsService.Create(r.Context(), admin.ID, "Admin private album", "private", "https://tesseract.syntheticsymbiosis.com/static/tesseract-1.jpg", atlas, types.AccessPrivate, []string{}, true, time.Date(2021, 3, 1, 12, 30, 0, 0, time.UTC))
-	app.albumsService.Create(r.Context(), admin.ID, "Admin public album", "public", "https://tesseract.syntheticsymbiosis.com/static/tesseract-2.jpg", atlas, types.AccessPublic, []string{}, true, time.Date(2022, 5, 13, 12, 30, 0, 0, time.UTC))
-	app.albumsService.Create(r.Context(), admin.ID, "Admin shared album", "shared", "https://tesseract.syntheticsymbiosis.com/static/tesseract-3.jpg", atlas, types.AccessShared, []string{"user@test.test"}, true, time.Date(2023, 7, 22, 12, 30, 0, 0, time.UTC))
-	app.albumsService.Create(r.Context(), admin.ID, "Admin inactive album", "inactive", "https://tesseract.syntheticsymbiosis.com/static/tesseract-14.jpg", atlas, types.AccessPublic, []string{}, false, time.Date(2024, 9, 1, 12, 30, 0, 0, time.UTC))
+	app.albumsService.Create(r.Context(), admin.ID, albums.CreateRequest{Title: "Admin private album", Slug: "private", Cover: "https://tesseract.syntheticsymbiosis.com/static/tesseract-1.jpg", Atlas: atlas, Access: types.AccessPrivate, SharedEmails: []string{}, IsActive: true, DateAt: time.Date(2021, 3, 1, 12, 30, 0, 0, time.UTC)})
+	app.albumsService.Create(r.Context(), admin.ID, albums.CreateRequest{Title: "Admin public album", Slug: "public", Cover: "https://tesseract.syntheticsymbiosis.com/static/tesseract-2.jpg", Atlas: atlas, Access: types.AccessPublic, SharedEmails: []string{}, IsActive: true, DateAt: time.Date(2022, 5, 13, 12, 30, 0, 0, time.UTC)})
+	app.albumsService.Create(r.Context(), admin.ID, albums.CreateRequest{Title: "Admin shared album", Slug: "shared", Cover: "https://tesseract.syntheticsymbiosis.com/static/tesseract-3.jpg", Atlas: atlas, Access: types.AccessShared, SharedEmails: []string{"user@test.test"}, IsActive: true, DateAt: time.Date(2023, 7, 22, 12, 30, 0, 0, time.UTC)})
+	app.albumsService.Create(r.Context(), admin.ID, albums.CreateRequest{Title: "Admin inactive album", Slug: "inactive", Cover: "https://tesseract.syntheticsymbiosis.com/static/tesseract-14.jpg", Atlas: atlas, Access: types.AccessPublic, SharedEmails: []string{}, IsActive: false, DateAt: time.Date(2024, 9, 1, 12, 30, 0, 0, time.UTC)})
 
 	app.response.SuccessDataOnly(w, r, map[string]string{
 		"playground": "admin created",
@@ -64,10 +65,10 @@ func (app *app) PlaygroundCreateUser(w http.ResponseWriter, r *http.Request) {
 	// Create user albums
 	atlas := GetDefaultAtlas()
 
-	app.albumsService.Create(r.Context(), user.ID, "User private album", "private", "https://tesseract.syntheticsymbiosis.com/static/tesseract-4.jpg", atlas, types.AccessPrivate, []string{}, true, time.Date(2021, 3, 1, 12, 30, 0, 0, time.UTC))
-	app.albumsService.Create(r.Context(), user.ID, "User public album", "public", "https://tesseract.syntheticsymbiosis.com/static/tesseract-5.jpg", atlas, types.AccessPublic, []string{}, true, time.Date(2022, 5, 13, 12, 30, 0, 0, time.UTC))
-	app.albumsService.Create(r.Context(), user.ID, "User shared album", "shared", "https://tesseract.syntheticsymbiosis.com/static/tesseract-6.jpg", atlas, types.AccessShared, []string{"admin@test.test"}, true, time.Date(2023, 7, 22, 12, 30, 0, 0, time.UTC))
-	app.albumsService.Create(r.Context(), user.ID, "User inactive album", "inactive", "https://tesseract.syntheticsymbiosis.com/static/tesseract-12.jpg", atlas, types.AccessPublic, []string{}, false, time.Date(2024, 9, 1, 12, 30, 0, 0, time.UTC))
+	app.albumsService.Create(r.Context(), user.ID, albums.CreateRequest{Title: "User private album", Slug: "private", Cover: "https://tesseract.syntheticsymbiosis.com/static/tesseract-4.jpg", Atlas: atlas, Access: types.AccessPrivate, SharedEmails: []string{}, IsActive: true, DateAt: time.Date(2021, 3, 1, 12, 30, 0, 0, time.UTC)})
+	app.albumsService.Create(r.Context(), user.ID, albums.CreateRequest{Title: "User public album", Slug: "public", Cover: "https://tesseract.syntheticsymbiosis.com/static/tesseract-5.jpg", Atlas: atlas, Access: types.AccessPublic, SharedEmails: []string{}, IsActive: true, DateAt: time.Date(2022, 5, 13, 12, 30, 0, 0, time.UTC)})
+	app.albumsService.Create(r.Context(), user.ID, albums.CreateRequest{Title: "User shared album", Slug: "shared", Cover: "https://tesseract.syntheticsymbiosis.com/static/tesseract-6.jpg", Atlas: atlas, Access: types.AccessShared, SharedEmails: []string{"admin@test.test"}, IsActive: true, DateAt: time.Date(2023, 7, 22, 12, 30, 0, 0, time.UTC)})
+	app.albumsService.Create(r.Context(), user.ID, albums.CreateRequest{Title: "User inactive album", Slug: "inactive", Cover: "https://tesseract.syntheticsymbiosis.com/static/tesseract-12.jpg", Atlas: atlas, Access: types.AccessPublic, SharedEmails: []string{}, IsActive: false, DateAt: time.Date(2024, 9, 1, 12, 30, 0, 0, time.UTC)})
 
 	app.response.SuccessDataOnly(w, r, map[string]string{
 		"playground": "user created",

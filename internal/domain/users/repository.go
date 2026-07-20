@@ -157,12 +157,12 @@ func (r *Repository) Create(ctx context.Context, email string, username string, 
 }
 
 /* Update user */
-func (r *Repository) Update(ctx context.Context, id uuid.UUID, username string, slug string, avatar string) (User, error) {
+func (r *Repository) Update(ctx context.Context, id uuid.UUID, req UpdateRequest) (User, error) {
 	u, err := r.q.UpdateUser(ctx, db.UpdateUserParams{
 		ID:       id,
-		Username: username,
-		Slug:     slug,
-		Avatar:   avatar,
+		Username: req.Username,
+		Slug:     req.Slug,
+		Avatar:   req.Avatar,
 	})
 
 	if err != nil {

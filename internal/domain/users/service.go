@@ -47,14 +47,14 @@ func (s *Service) Upsert(ctx context.Context, email string, username string, ava
 	return s.users.Upsert(ctx, email, username, avatar)
 }
 
-/* Create user. Use with caution! Users must be created with Upsert function via OAuth process and have validated email */
+/* Create user. Development only! Use with caution! Users must be created with Upsert function via OAuth process and have validated email */
 func (s *Service) Create(ctx context.Context, email string, username string, slug string, avatar string, role types.Role) (User, error) {
 	return s.users.Create(ctx, email, username, slug, avatar, role)
 }
 
 /* Update user info */
-func (s *Service) Update(ctx context.Context, id uuid.UUID, slug string, username string, avatar string) (User, error) {
-	u, err := s.users.Update(ctx, id, username, slug, avatar)
+func (s *Service) Update(ctx context.Context, id uuid.UUID, req UpdateRequest) (User, error) {
+	u, err := s.users.Update(ctx, id, req)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			// User not found
@@ -62,7 +62,7 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, slug string, usernam
 		}
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
-			if (pgErr.Code == "23505") && (pgErr.ConstraintName == "users_slug_key") {
+			if (pgErr.Code == "23505") && (pgErr.ConstraintName == "idx_users_slug_active") {
 				// Slug already exists
 				return User{}, response.ErrUserSlugExists.Wrap(err)
 			}
