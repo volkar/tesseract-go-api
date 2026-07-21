@@ -20,7 +20,7 @@ type CreateRequest struct {
 	Title        string       `json:"title" validate:"required,min=2,max=255"`
 	Atlas        types.Atlas  `json:"atlas" validate:"required,min=1,dive"`
 	Access       types.Access `json:"access" validate:"required"`
-	SharedEmails []string     `json:"shared_emails"`
+	SharedEmails []string     `json:"shared_emails" validate:"dive,email"`
 	Slug         string       `json:"slug" validate:"required,min=3,max=255,slug"`
 	Cover        string       `json:"cover" validate:"required,url"`
 	DateAt       time.Time    `json:"date_at" validate:"required"`
@@ -31,7 +31,7 @@ type UpdateRequest struct {
 	Title        string       `json:"title" validate:"required,min=2,max=255"`
 	Atlas        types.Atlas  `json:"atlas" validate:"required,min=1,dive"`
 	Access       types.Access `json:"access" validate:"required"`
-	SharedEmails []string     `json:"shared_emails"`
+	SharedEmails []string     `json:"shared_emails" validate:"dive,email"`
 	Slug         string       `json:"slug" validate:"required,min=3,max=255,slug"`
 	Cover        string       `json:"cover" validate:"required,url"`
 	DateAt       time.Time    `json:"date_at" validate:"required"`
@@ -261,6 +261,11 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Normalize optional values
+	if req.SharedEmails == nil {
+		req.SharedEmails = []string{}
+	}
+
 	// Create album
 	album, err := h.albums.Create(r.Context(), claims.UserID, req)
 	if err != nil {
@@ -300,6 +305,11 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	if err := h.validator.Struct(&req); err != nil {
 		h.response.ValidationError(w, r, err)
 		return
+	}
+
+	// Normalize optional values
+	if req.SharedEmails == nil {
+		req.SharedEmails = []string{}
 	}
 
 	// Update album
