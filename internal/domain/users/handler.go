@@ -50,10 +50,8 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Map user
-	mappedUser := ToMe(u)
-
-	h.response.SuccessDataOnly(w, r, mappedUser)
+	// Map and return
+	h.response.SuccessDataOnly(w, r, ToMe(u))
 }
 
 /* Get user info by user slug */
@@ -66,11 +64,8 @@ func (h *Handler) Info(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Map to public user
-	user := ToPublic(u)
-
-	// Return user info
-	h.response.SuccessDataOnly(w, r, user)
+	// Map and return user info
+	h.response.SuccessDataOnly(w, r, ToPublic(u))
 }
 
 /* Update user info */
@@ -129,7 +124,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.response.SuccessWithData(w, r, response.SuccessUserUpdated, u)
+	h.response.SuccessWithData(w, r, response.SuccessUserUpdated, ToMe(u))
 }
 
 /* Delete user */

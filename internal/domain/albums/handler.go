@@ -3,7 +3,7 @@ package albums
 import (
 	"api/internal/domain/shared/types"
 	"api/internal/domain/tokens"
-	"api/internal/domain/users"
+	db "api/internal/platform/database/sqlc"
 	"api/internal/platform/request"
 	"api/internal/platform/response"
 	"context"
@@ -61,7 +61,7 @@ func NewHandler(service *Service, users UserGetter, response *response.Response,
 }
 
 type UserGetter interface {
-	GetAvailableBySlug(ctx context.Context, userSlug string) (users.User, error)
+	GetAvailableBySlug(ctx context.Context, userSlug string) (db.User, error)
 }
 
 /* Get available album by user slug and album slug */
@@ -164,13 +164,18 @@ func (h *Handler) AvailableList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var a []AlbumResponse
+	var dba []db.Album
 	var nextCursor string
 	if claims.UserID == uuid.Nil || claims.UserID != user.ID {
 		// Get public album list
-		a, nextCursor, err = h.albums.ListAvailable(r.Context(), user.ID, claims.Email, cursor, limit)
+		dba, nextCursor, err = h.albums.ListAvailable(r.Context(), user.ID, claims.Email, cursor, limit)
+		// Map Albums to AlbumInList
+		a = ToPublicAlbumList(dba)
 	} else {
 		// Get owned album list
-		a, nextCursor, err = h.albums.ListOwned(r.Context(), claims.UserID, cursor, limit)
+		dba, nextCursor, err = h.albums.ListOwned(r.Context(), claims.UserID, cursor, limit)
+		// Map Albums to AlbumInList
+		a = ToMyAlbumList(dba)
 	}
 
 	if err != nil {
@@ -207,7 +212,7 @@ func (h *Handler) OwnedList(w http.ResponseWriter, r *http.Request) {
 		h.response.Error(w, r, err)
 		return
 	}
-	h.response.Paginated(w, r, albums, nextCursor)
+	h.response.Paginated(w, r, ToMyAlbumList(albums), nextCursor)
 }
 
 /* Get authenticated user's list of deleted albums */
@@ -235,7 +240,7 @@ func (h *Handler) TrashedList(w http.ResponseWriter, r *http.Request) {
 		h.response.Error(w, r, err)
 		return
 	}
-	h.response.Paginated(w, r, albums, nextCursor)
+	h.response.Paginated(w, r, ToMyAlbumList(albums), nextCursor)
 }
 
 /* Create album */
@@ -378,7 +383,7 @@ func (h *Handler) RevokeDirectToken(w http.ResponseWriter, r *http.Request) {
 	h.response.Success(w, r, response.SuccessDirectTokenRevoked)
 }
 
-/* Update album */
+/* Toggle active state for album */
 func (h *Handler) ToggleActive(w http.ResponseWriter, r *http.Request) {
 	// Get user claims
 	claims, ok := tokens.GetClaimsFromContext(r.Context())

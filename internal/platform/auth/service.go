@@ -2,7 +2,7 @@ package auth
 
 import (
 	"api/internal/domain/tokens"
-	"api/internal/domain/users"
+	db "api/internal/platform/database/sqlc"
 	"api/internal/platform/request"
 	"api/internal/platform/response"
 	"context"
@@ -34,17 +34,17 @@ func NewService(tokens *tokens.Manager, users UsersService, logger *slog.Logger,
 }
 
 type UsersService interface {
-	Upsert(ctx context.Context, email string, username string, avatar string) (users.User, error)
-	GetAvailable(ctx context.Context, userID uuid.UUID) (users.User, error)
+	Upsert(ctx context.Context, email string, username string, avatar string) (db.User, error)
+	GetAvailable(ctx context.Context, userID uuid.UUID) (db.User, error)
 }
 
 /* Get email and name from OAuth user, creates access and refresh tokens */
-func (s *Service) UpsertOAuthUser(ctx context.Context, oauthUser goth.User) (users.User, error) {
+func (s *Service) UpsertOAuthUser(ctx context.Context, oauthUser goth.User) (db.User, error) {
 	if oauthUser.Email == "" {
-		return users.User{}, response.ErrOAuthNoEmail
+		return db.User{}, response.ErrOAuthNoEmail
 	}
 	if oauthUser.Name == "" {
-		return users.User{}, response.ErrOAuthNoName
+		return db.User{}, response.ErrOAuthNoName
 	}
 	// Upsert allows register new users
 	// Can be replaced with getting user by email, to allows authentication only
@@ -52,15 +52,15 @@ func (s *Service) UpsertOAuthUser(ctx context.Context, oauthUser goth.User) (use
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			// User deleted
-			return users.User{}, response.ErrNoPermission.Wrap(err)
+			return db.User{}, response.ErrNoPermission.Wrap(err)
 		}
-		return users.User{}, err
+		return db.User{}, err
 	}
 	return u, nil
 }
 
 /* Creates access and refresh tokens for user */
-func (s *Service) IssueSessionTokens(ctx context.Context, user users.User, meta request.Metadata) (string, string, error) {
+func (s *Service) IssueSessionTokens(ctx context.Context, user db.User, meta request.Metadata) (string, string, error) {
 	// Generate refresh token random string
 	refresh, err := s.tokens.GenerateRefreshString()
 	if err != nil {

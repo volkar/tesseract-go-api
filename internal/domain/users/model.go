@@ -8,40 +8,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// Full user (stored in cache, standart type)
-
-type User struct {
-	ID        uuid.UUID  `json:"id"`
-	Email     string     `json:"email"`
-	Username  string     `json:"username"`
-	Avatar    string     `json:"avatar"`
-	Slug      string     `json:"slug"`
-	Role      types.Role `json:"role"`
-	CreatedAt time.Time  `json:"created_at"`
-	UpdatedAt time.Time  `json:"updated_at"`
-	DeletedAt *time.Time `json:"deleted_at"`
-}
-
-func FromDB(u db.User) User {
-	var deletedAt *time.Time
-	if u.DeletedAt.Valid {
-		deletedAt = &u.DeletedAt.Time
-	}
-	return User{
-		ID:        u.ID,
-		Email:     u.Email,
-		Username:  u.Username,
-		Avatar:    u.Avatar,
-		Slug:      u.Slug,
-		Role:      u.Role,
-		CreatedAt: u.CreatedAt,
-		UpdatedAt: u.UpdatedAt,
-		DeletedAt: deletedAt,
-	}
-}
-
-// User response
-
+// Represents the API contract for the frontend
 type UserResponse struct {
 	ID        *uuid.UUID  `json:"id,omitempty"`
 	Email     *string     `json:"email,omitempty"`
@@ -54,7 +21,7 @@ type UserResponse struct {
 	DeletedAt *time.Time  `json:"deleted_at,omitempty"`
 }
 
-func ToMe(u User) UserResponse {
+func ToMe(u db.User) UserResponse {
 	return UserResponse{
 		ID:        &u.ID,
 		Email:     &u.Email,
@@ -66,7 +33,7 @@ func ToMe(u User) UserResponse {
 	}
 }
 
-func ToPublic(u User) UserResponse {
+func ToPublic(u db.User) UserResponse {
 	return UserResponse{
 		Username: u.Username,
 		Avatar:   u.Avatar,

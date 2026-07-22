@@ -56,12 +56,12 @@ var getAlbumByMapperLua string
 var getAlbumByMapperScript = redis.NewScript(getAlbumByMapperLua)
 
 /* Get non deleted album by user id and album slug */
-func (r *Repository) GetBySlug(ctx context.Context, userID uuid.UUID, albumSlug string) (Album, error) {
+func (r *Repository) GetBySlug(ctx context.Context, userID uuid.UUID, albumSlug string) (db.Album, error) {
 	// Get album from cache
 	a, err := r.getAlbumFromCacheBySlug(ctx, userID, albumSlug)
 	if err == nil {
-		// Album found in cache, map and return
-		return FromDB(a), nil
+		// Album found in cache, return
+		return a, nil
 	}
 
 	// Not found in cache, get album from database.
@@ -89,20 +89,19 @@ func (r *Repository) GetBySlug(ctx context.Context, userID uuid.UUID, albumSlug 
 	})
 
 	if err != nil {
-		return Album{}, err
+		return db.Album{}, err
 	}
 
-	// Map and return
-	return FromDB(val.(db.Album)), nil
+	return val.(db.Album), nil
 }
 
 /* Get album by user id and album id */
-func (r *Repository) GetByID(ctx context.Context, userID uuid.UUID, albumID uuid.UUID) (Album, error) {
+func (r *Repository) GetByID(ctx context.Context, userID uuid.UUID, albumID uuid.UUID) (db.Album, error) {
 	// Get album from cache
 	a, err := r.getAlbumFromCache(ctx, albumID)
 	if err == nil && a.UserID == userID {
-		// Album found in cache, map and return
-		return FromDB(a), nil
+		// Album found in cache, return
+		return a, nil
 	}
 
 	// Not found in cache, get album from database.
@@ -132,20 +131,19 @@ func (r *Repository) GetByID(ctx context.Context, userID uuid.UUID, albumID uuid
 	})
 
 	if err != nil {
-		return Album{}, err
+		return db.Album{}, err
 	}
 
-	// Map and return
-	return FromDB(val.(db.Album)), nil
+	return val.(db.Album), nil
 }
 
 /* Get non deleted album by direct token */
-func (r *Repository) GetByDirectToken(ctx context.Context, token uuid.UUID) (Album, error) {
+func (r *Repository) GetByDirectToken(ctx context.Context, token uuid.UUID) (db.Album, error) {
 	// Get album from cache
 	a, err := r.getAlbumFromCacheByDirectToken(ctx, token)
 	if err == nil && a.IsActive && a.DirectToken.Valid && a.DirectToken.UUID == token {
-		// Album found in cache, map and return
-		return FromDB(a), nil
+		// Album found in cache, return
+		return a, nil
 	}
 
 	// Not found in cache, get album from database.
@@ -171,19 +169,18 @@ func (r *Repository) GetByDirectToken(ctx context.Context, token uuid.UUID) (Alb
 	})
 
 	if err != nil {
-		return Album{}, err
+		return db.Album{}, err
 	}
 
-	// Map and return
-	return FromDB(val.(db.Album)), nil
+	return val.(db.Album), nil
 }
 
 /* Get paginated list of available albums by user id */
-func (r *Repository) ListAvailable(ctx context.Context, userID uuid.UUID, viewerEmail string, cursor string, limit int32) ([]Album, string, error) {
+func (r *Repository) ListAvailable(ctx context.Context, userID uuid.UUID, viewerEmail string, cursor string, limit int32) ([]db.Album, string, error) {
 	// Parse secure cursor
 	cursorDate, cursorID, err := r.cursorManager.Parse(cursor)
 	if err != nil {
-		return []Album{}, "", response.ErrInvalidCursor.Wrap(err)
+		return []db.Album{}, "", response.ErrInvalidCursor.Wrap(err)
 	}
 
 	// Fetch list of IDs from database
@@ -196,7 +193,7 @@ func (r *Repository) ListAvailable(ctx context.Context, userID uuid.UUID, viewer
 		Limit:        fetchLimit,
 	})
 	if err != nil {
-		return []Album{}, "", err
+		return []db.Album{}, "", err
 	}
 
 	// Map sqlc specific type to our common pagination row
@@ -212,11 +209,11 @@ func (r *Repository) ListAvailable(ctx context.Context, userID uuid.UUID, viewer
 }
 
 /* Get paginated list of owned albums by user id */
-func (r *Repository) ListOwned(ctx context.Context, userID uuid.UUID, cursor string, limit int32) ([]Album, string, error) {
+func (r *Repository) ListOwned(ctx context.Context, userID uuid.UUID, cursor string, limit int32) ([]db.Album, string, error) {
 	// Parse secure cursor
 	cursorDate, cursorID, err := r.cursorManager.Parse(cursor)
 	if err != nil {
-		return []Album{}, "", response.ErrInvalidCursor.Wrap(err)
+		return []db.Album{}, "", response.ErrInvalidCursor.Wrap(err)
 	}
 
 	// Fetch list of IDs from database
@@ -228,7 +225,7 @@ func (r *Repository) ListOwned(ctx context.Context, userID uuid.UUID, cursor str
 		Limit:        fetchLimit,
 	})
 	if err != nil {
-		return []Album{}, "", err
+		return []db.Album{}, "", err
 	}
 
 	// Map sqlc specific type to our common pagination row
@@ -244,11 +241,11 @@ func (r *Repository) ListOwned(ctx context.Context, userID uuid.UUID, cursor str
 }
 
 /* Get paginated list of trashed albums by user id */
-func (r *Repository) ListTrashed(ctx context.Context, userID uuid.UUID, cursor string, limit int32) ([]Album, string, error) {
+func (r *Repository) ListTrashed(ctx context.Context, userID uuid.UUID, cursor string, limit int32) ([]db.Album, string, error) {
 	// Parse secure cursor
 	cursorDate, cursorID, err := r.cursorManager.Parse(cursor)
 	if err != nil {
-		return []Album{}, "", response.ErrInvalidCursor.Wrap(err)
+		return []db.Album{}, "", response.ErrInvalidCursor.Wrap(err)
 	}
 
 	// Fetch list of IDs from database
@@ -260,7 +257,7 @@ func (r *Repository) ListTrashed(ctx context.Context, userID uuid.UUID, cursor s
 		Limit:           fetchLimit,
 	})
 	if err != nil {
-		return []Album{}, "", err
+		return []db.Album{}, "", err
 	}
 
 	// Calculate next cursor if needed
@@ -271,14 +268,11 @@ func (r *Repository) ListTrashed(ctx context.Context, userID uuid.UUID, cursor s
 		nextCursor, _ = r.cursorManager.Encode(lastItem.DeletedAt.Time, lastItem.ID.String())
 	}
 
-	// Map albums
-	mappedAlbums := FromDBList(albums)
-
-	return mappedAlbums, nextCursor, nil
+	return albums, nextCursor, nil
 }
 
 /* Create album */
-func (r *Repository) Create(ctx context.Context, userID uuid.UUID, req CreateRequest) (Album, error) {
+func (r *Repository) Create(ctx context.Context, userID uuid.UUID, req CreateRequest) (db.Album, error) {
 	a, err := r.q.CreateAlbum(ctx, db.CreateAlbumParams{
 		UserID:       userID,
 		Title:        req.Title,
@@ -291,7 +285,7 @@ func (r *Repository) Create(ctx context.Context, userID uuid.UUID, req CreateReq
 		DateAt:       req.DateAt,
 	})
 	if err != nil {
-		return Album{}, err
+		return db.Album{}, err
 	}
 
 	// Async set album with mappers to cache
@@ -302,12 +296,11 @@ func (r *Repository) Create(ctx context.Context, userID uuid.UUID, req CreateReq
 		r.setAlbumToCache(timeoutCtx, album)
 	}(a)
 
-	// Map and return
-	return FromDB(a), nil
+	return a, nil
 }
 
 /* Update album */
-func (r *Repository) Update(ctx context.Context, userID uuid.UUID, albumID uuid.UUID, req UpdateRequest) (Album, error) {
+func (r *Repository) Update(ctx context.Context, userID uuid.UUID, albumID uuid.UUID, req UpdateRequest) (db.Album, error) {
 	a, err := r.q.UpdateAlbum(ctx, db.UpdateAlbumParams{
 		AlbumID:      albumID,
 		UserID:       userID,
@@ -321,7 +314,7 @@ func (r *Repository) Update(ctx context.Context, userID uuid.UUID, albumID uuid.
 		IsActive:     req.IsActive,
 	})
 	if err != nil {
-		return Album{}, err
+		return db.Album{}, err
 	}
 
 	// Async update album with mapper in cache
@@ -337,8 +330,7 @@ func (r *Repository) Update(ctx context.Context, userID uuid.UUID, albumID uuid.
 		r.setAlbumToCache(timeoutCtx, album)
 	}(a.Album, a.OldSlug)
 
-	// Map and return
-	return FromDB(a.Album), err
+	return a.Album, err
 }
 
 /* Update direct token */
@@ -356,10 +348,14 @@ func (r *Repository) UpdateDirectToken(ctx context.Context, userID uuid.UUID, al
 	if a.OldDirectToken.Valid {
 		r.invalidateAlbumDirectTokenCacheOnly(ctx, a.OldDirectToken)
 	}
-	// Set new album with mapper to cache
-	r.setAlbumToCache(ctx, a.Album)
+	// Async update album cache (entity + mapper)
+	bgCtx := context.WithoutCancel(ctx)
+	go func(album db.Album) {
+		timeoutCtx, cancel := context.WithTimeout(bgCtx, 100*time.Millisecond)
+		defer cancel()
+		r.setAlbumToCache(timeoutCtx, a.Album)
+	}(a.Album)
 
-	// Map and return
 	return a.Album.DirectToken, err
 }
 
@@ -374,8 +370,13 @@ func (r *Repository) ToggleActive(ctx context.Context, userID uuid.UUID, albumID
 		return uuid.UUID{}, err
 	}
 
-	// Set new album with mapper to cache
-	r.setAlbumToCache(ctx, a.Album)
+	// Async update album cache (entity + mapper)
+	bgCtx := context.WithoutCancel(ctx)
+	go func(album db.Album) {
+		timeoutCtx, cancel := context.WithTimeout(bgCtx, 100*time.Millisecond)
+		defer cancel()
+		r.setAlbumToCache(timeoutCtx, a.Album)
+	}(a.Album)
 
 	return a.Album.ID, err
 }
@@ -427,9 +428,9 @@ func (r *Repository) Purge(ctx context.Context, userID uuid.UUID, albumID uuid.U
 	return id, nil
 }
 
-func (r *Repository) hydrateAlbumsList(ctx context.Context, idRows []albumPaginationRow, limit int32) ([]Album, string, error) {
+func (r *Repository) hydrateAlbumsList(ctx context.Context, idRows []albumPaginationRow, limit int32) ([]db.Album, string, error) {
 	if len(idRows) == 0 {
-		return []Album{}, "", nil
+		return []db.Album{}, "", nil
 	}
 
 	fetchLimit := limit + 1
@@ -470,7 +471,7 @@ func (r *Repository) hydrateAlbumsList(ctx context.Context, idRows []albumPagina
 	if len(missingIDs) > 0 {
 		dbAlbums, err := r.q.GetAlbumsByIDs(ctx, missingIDs)
 		if err != nil {
-			return []Album{}, "", err
+			return []db.Album{}, "", err
 		}
 
 		// Detach context from parent
@@ -488,10 +489,10 @@ func (r *Repository) hydrateAlbumsList(ctx context.Context, idRows []albumPagina
 	}
 
 	// Restore strict ordering
-	finalAlbums := make([]Album, 0, len(idRows))
+	finalAlbums := make([]db.Album, 0, len(idRows))
 	for _, row := range idRows {
 		if album, ok := albumsArray[row.ID]; ok {
-			finalAlbums = append(finalAlbums, FromDB(album))
+			finalAlbums = append(finalAlbums, album)
 		}
 	}
 

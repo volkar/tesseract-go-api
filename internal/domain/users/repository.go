@@ -6,7 +6,6 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
-	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -49,18 +48,18 @@ var invalidateUserWithMapperLua string
 var invalidateUserWithMapperScript = redis.NewScript(invalidateUserWithMapperLua)
 
 /* Get non deleted user by id from cache */
-func (r *Repository) GetAvailable(ctx context.Context, id uuid.UUID) (User, error) {
+func (r *Repository) GetAvailable(ctx context.Context, id uuid.UUID) (db.User, error) {
 	// Get user from cache
 	u, err := r.getUserFromCache(ctx, id)
 	if err == nil {
-		// User found in cache, map and return
-		return FromDB(u), nil
+		// User found in cache, return
+		return u, nil
 	}
 
 	// Not found in cache, get from the database
 	dbUser, err := r.q.GetAvailableUser(ctx, id)
 	if err != nil {
-		return User{}, err
+		return db.User{}, err
 	}
 
 	// Async set user to cache
@@ -71,15 +70,15 @@ func (r *Repository) GetAvailable(ctx context.Context, id uuid.UUID) (User, erro
 		r.setUserToCache(timeoutCtx, user)
 	}(dbUser)
 
-	return FromDB(dbUser), nil
+	return dbUser, nil
 }
 
 /* Get non deleted user by slug with cache */
-func (r *Repository) GetAvailableBySlug(ctx context.Context, slug string) (User, error) {
+func (r *Repository) GetAvailableBySlug(ctx context.Context, slug string) (db.User, error) {
 	// Try to get user from cache
 	user, _ := r.getUserBySlugFromCache(ctx, slug)
 	if user.ID != uuid.Nil {
-		return FromDB(user), nil
+		return user, nil
 	}
 
 	// User not found in cache, get from database
@@ -102,21 +101,21 @@ func (r *Repository) GetAvailableBySlug(ctx context.Context, slug string) (User,
 	})
 
 	if sfErr != nil {
-		return User{}, sfErr
+		return db.User{}, sfErr
 	}
 
-	return FromDB(val.(db.User)), nil
+	return val.(db.User), nil
 }
 
 /* Upsert user by email and username, auth process */
-func (r *Repository) Upsert(ctx context.Context, email string, username string, avatar string) (User, error) {
+func (r *Repository) Upsert(ctx context.Context, email string, username string, avatar string) (db.User, error) {
 	u, err := r.q.UpsertUser(ctx, db.UpsertUserParams{
 		Email:    email,
 		Username: username,
 		Avatar:   avatar,
 	})
 	if err != nil {
-		return User{}, err
+		return db.User{}, err
 	}
 
 	// Async set new user to cache
@@ -127,12 +126,11 @@ func (r *Repository) Upsert(ctx context.Context, email string, username string, 
 		r.setUserToCache(timeoutCtx, user)
 	}(u)
 
-	user := FromDB(u)
-	return user, nil
+	return u, nil
 }
 
 /* Create user */
-func (r *Repository) Create(ctx context.Context, email string, username string, slug string, avatar string, role types.Role) (User, error) {
+func (r *Repository) Create(ctx context.Context, email string, username string, slug string, avatar string, role types.Role) (db.User, error) {
 	u, err := r.q.CreateUser(ctx, db.CreateUserParams{
 		Username: username,
 		Slug:     slug,
@@ -141,8 +139,7 @@ func (r *Repository) Create(ctx context.Context, email string, username string, 
 		Role:     role,
 	})
 	if err != nil {
-		slog.Error("err", "err", err)
-		return User{}, err
+		return db.User{}, err
 	}
 
 	// Async set new user to cache
@@ -153,11 +150,11 @@ func (r *Repository) Create(ctx context.Context, email string, username string, 
 		r.setUserToCache(timeoutCtx, user)
 	}(u)
 
-	return FromDB(u), nil
+	return u, nil
 }
 
 /* Update user */
-func (r *Repository) Update(ctx context.Context, id uuid.UUID, req UpdateRequest) (User, error) {
+func (r *Repository) Update(ctx context.Context, id uuid.UUID, req UpdateRequest) (db.User, error) {
 	u, err := r.q.UpdateUser(ctx, db.UpdateUserParams{
 		ID:       id,
 		Username: req.Username,
@@ -166,7 +163,7 @@ func (r *Repository) Update(ctx context.Context, id uuid.UUID, req UpdateRequest
 	})
 
 	if err != nil {
-		return User{}, err
+		return db.User{}, err
 	}
 
 	// Async update user cache
@@ -182,7 +179,7 @@ func (r *Repository) Update(ctx context.Context, id uuid.UUID, req UpdateRequest
 		r.setUserToCache(timeoutCtx, user)
 	}(u.User, u.OldSlug)
 
-	return FromDB(u.User), nil
+	return u.User, nil
 }
 
 /* Delete user */

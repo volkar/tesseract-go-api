@@ -1,6 +1,7 @@
 package albums
 
 import (
+	db "api/internal/platform/database/sqlc"
 	"api/internal/platform/response"
 	"context"
 	"errors"
@@ -23,137 +24,131 @@ func NewService(repo *Repository, albumsPerPage int) *Service {
 }
 
 /* Get available album by user slug and album slug */
-func (s *Service) GetAvailable(ctx context.Context, userID uuid.UUID, albumSlug string, viewerID uuid.UUID, viewerEmail string) (Album, error) {
+func (s *Service) GetAvailable(ctx context.Context, userID uuid.UUID, albumSlug string, viewerID uuid.UUID, viewerEmail string) (db.Album, error) {
 	a, err := s.albums.GetBySlug(ctx, userID, albumSlug)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return Album{}, response.ErrAlbumNotFound.Wrap(err)
+			return db.Album{}, response.ErrAlbumNotFound.Wrap(err)
 		}
-		return Album{}, err
+		return db.Album{}, err
 	}
 	// Album found in cache or database. Check access permissions
 	isOwner := viewerID != uuid.Nil && viewerID == a.UserID
 	if (!a.IsActive && !isOwner) || !a.Access.CanAccess(a.SharedEmails, viewerEmail, isOwner) {
-		return Album{}, response.ErrAlbumNotFound
+		return db.Album{}, response.ErrAlbumNotFound
 	}
 	return a, nil
 }
 
 /* Get owned album by user id and album id */
-func (s *Service) GetOwned(ctx context.Context, userID uuid.UUID, albumID uuid.UUID) (Album, error) {
+func (s *Service) GetOwned(ctx context.Context, userID uuid.UUID, albumID uuid.UUID) (db.Album, error) {
 	a, err := s.albums.GetByID(ctx, userID, albumID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return Album{}, response.ErrAlbumNotFound.Wrap(err)
+			return db.Album{}, response.ErrAlbumNotFound.Wrap(err)
 		}
-		return Album{}, err
+		return db.Album{}, err
 	}
 	// Album found in cache or database. Check ownership
 	if a.UserID != userID {
-		return Album{}, response.ErrAlbumNotFound
+		return db.Album{}, response.ErrAlbumNotFound
 	}
 	return a, nil
 }
 
 /* Get album by direct token (Bypasses normal Access Control) */
-func (s *Service) GetByDirectToken(ctx context.Context, token uuid.UUID) (Album, error) {
+func (s *Service) GetByDirectToken(ctx context.Context, token uuid.UUID) (db.Album, error) {
 	a, err := s.albums.GetByDirectToken(ctx, token)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return Album{}, response.ErrAlbumNotFound.Wrap(err)
+			return db.Album{}, response.ErrAlbumNotFound.Wrap(err)
 		}
 		if err.Error() == "album_not_found" {
 			// Error from redis script
-			return Album{}, response.ErrAlbumNotFound.Wrap(err)
+			return db.Album{}, response.ErrAlbumNotFound.Wrap(err)
 		}
-		return Album{}, err
+		return db.Album{}, err
 	}
 	// Album found in cache or database. Check if it is active
 	if !a.IsActive {
-		return Album{}, response.ErrAlbumNotFound
+		return db.Album{}, response.ErrAlbumNotFound
 	}
 	return a, nil
 }
 
 /* Get list of available albums by user id */
-func (s *Service) ListAvailable(ctx context.Context, userID uuid.UUID, viewerEmail string, cursor string, limit int) ([]AlbumResponse, string, error) {
+func (s *Service) ListAvailable(ctx context.Context, userID uuid.UUID, viewerEmail string, cursor string, limit int) ([]db.Album, string, error) {
 	if limit <= 0 || limit > s.albumsPerPage {
 		limit = s.albumsPerPage
 	}
 
 	a, nextCursor, err := s.albums.ListAvailable(ctx, userID, viewerEmail, cursor, int32(limit))
 	if err != nil {
-		return []AlbumResponse{}, "", err
+		return []db.Album{}, "", err
 	}
-	// Map Albums to AlbumInList
-	albums := ToPublicAlbumList(a)
-	return albums, nextCursor, nil
+	return a, nextCursor, nil
 }
 
 /* Get list of all owned albums by user id */
-func (s *Service) ListOwned(ctx context.Context, userID uuid.UUID, cursor string, limit int) ([]AlbumResponse, string, error) {
+func (s *Service) ListOwned(ctx context.Context, userID uuid.UUID, cursor string, limit int) ([]db.Album, string, error) {
 	if limit <= 0 || limit > s.albumsPerPage {
 		limit = s.albumsPerPage
 	}
 
 	a, nextCursor, err := s.albums.ListOwned(ctx, userID, cursor, int32(limit))
 	if err != nil {
-		return []AlbumResponse{}, "", err
+		return []db.Album{}, "", err
 	}
-	// Map Albums to AlbumInList
-	albums := ToMyAlbumList(a)
-	return albums, nextCursor, nil
+	return a, nextCursor, nil
 }
 
 /* Get list of trashed albums by user id */
-func (s *Service) ListTrashed(ctx context.Context, userID uuid.UUID, cursor string, limit int) ([]AlbumResponse, string, error) {
+func (s *Service) ListTrashed(ctx context.Context, userID uuid.UUID, cursor string, limit int) ([]db.Album, string, error) {
 	if limit <= 0 || limit > s.albumsPerPage {
 		limit = s.albumsPerPage
 	}
 	a, nextCursor, err := s.albums.ListTrashed(ctx, userID, cursor, int32(limit))
 	if err != nil {
-		return []AlbumResponse{}, "", err
+		return []db.Album{}, "", err
 	}
-	// Map Albums to AlbumInList
-	albums := ToMyAlbumList(a)
-	return albums, nextCursor, nil
+	return a, nextCursor, nil
 }
 
 /* Create album */
-func (s *Service) Create(ctx context.Context, userID uuid.UUID, req CreateRequest) (Album, error) {
+func (s *Service) Create(ctx context.Context, userID uuid.UUID, req CreateRequest) (db.Album, error) {
 	a, err := s.albums.Create(ctx, userID, req)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.Is(err, pgx.ErrNoRows) {
 			// User deleted or not existed
-			return Album{}, response.ErrNoPermission.Wrap(err)
+			return db.Album{}, response.ErrNoPermission.Wrap(err)
 		}
 		if errors.As(err, &pgErr) {
 			if (pgErr.Code == "23505") && (pgErr.ConstraintName == "idx_albums_user_slug_active") {
-				return Album{}, response.ErrAlbumSlugExists.Wrap(err)
+				return db.Album{}, response.ErrAlbumSlugExists.Wrap(err)
 			}
 		}
-		return Album{}, err
+		return db.Album{}, err
 	}
 	return a, nil
 }
 
 /* Update album */
-func (s *Service) Update(ctx context.Context, userID uuid.UUID, albumID uuid.UUID, req UpdateRequest) (Album, error) {
+func (s *Service) Update(ctx context.Context, userID uuid.UUID, albumID uuid.UUID, req UpdateRequest) (db.Album, error) {
 	a, err := s.albums.Update(ctx, userID, albumID, req)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Album not found or user is deleted
-			return Album{}, response.ErrNoPermission.Wrap(err)
+			return db.Album{}, response.ErrNoPermission.Wrap(err)
 		}
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			if (pgErr.Code == "23505") && (pgErr.ConstraintName == "idx_albums_user_slug_active") {
 				// Slug conflict
-				return Album{}, response.ErrAlbumSlugExists.Wrap(err)
+				return db.Album{}, response.ErrAlbumSlugExists.Wrap(err)
 			}
 		}
-		return Album{}, err
+		return db.Album{}, err
 	}
 	return a, nil
 }
